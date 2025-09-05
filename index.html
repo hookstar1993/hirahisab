@@ -369,13 +369,25 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, onSnapshot, query, where, getDocs, setDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "test", authDomain: "test.firebaseapp.com", projectId: "test" };
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'hira-hisab-diary';
+        // Environment se config lene ki koshish karein, nahi to hardcoded config use karein
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : {
+                apiKey: "AIzaSyCUd4LsorImJIYxD8CqiXJ-y423vuJyku8",
+                authDomain: "hookstar1993.github.io",
+                projectId: "hira-hisab-app",
+                storageBucket: "hira-hisab-app.firebasestorage.app",
+                messagingSenderId: "814214532826",
+                appId: "1:814214532826:web:2c001e977c95655e8e5fe3",
+                measurementId: "G-07QF7KYF2T"
+            };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : undefined;
 
         const translations = {
             en: { main_title: "Hira Hisab Diary", main_subtitle: "Your Personal Diamond Calculation Diary", month_label: "Select Month & Year", monthly_summary_title: "Monthly Summary", total_hira_label: "Total Hira", total_amount_label: "Total Amount", total_upad_label: "Total Upad", net_amount_label: "Net Amount", backup_btn: "Download Backup", restore_btn: "Restore from Backup", export_pdf_btn: "Export Month as PDF", entries_for_label: "Entries for ", hira_entries_label: "Hira Hisab", add_entry_label: "Add New Hira Entry", quantity_placeholder: "Diamonds (Qty)", rate_placeholder: "Rate per Diamond", save_entry_btn: "Save Hira", upad_entries_label: "Upad Hisab", add_upad_label: "Add New Upad Entry", amount_placeholder: "Amount", note_placeholder_optional: "Note (Optional)", save_upad_btn: "Save Upad", pdf_modal_title: "Select PDF Language", pdf_modal_subtitle: "Choose the language for your report.", choice_modal_title: "Select Entry Type", choice_modal_subtitle: "What would you like to add for", add_hira_choice_btn: "Add Hira / View Entries", add_upad_choice_btn: "Add Upad / View Entries", hira_unit: "Hira", upad_unit: "Upad", currency_symbol: "₹", months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], pdf: { title: "Hira Hisab Report", hiraTitle: "Hira Work Details", upadTitle: "Upad (Advance) Details", finalSummaryTitle: "Final Summary", totalHira: "Total Hira", totalAmount: "Total Amount", totalUpad: "Total Upad", netAmount: "Net Payable Amount", date: "Date", qty: "Diamonds (Qty)", rate: "Rate", total: "Total Amount", note: "Note", amount: "Amount", generatedOn: "Generated on" } },
-            gu: { main_title: "હીરા હિસાબ ડાયરી", main_subtitle: "તમારો અંગત હીરા હિસાબ", month_label: "મહિનો અને વર્ષ પસંદ કરો", monthly_summary_title: "માસિક સારાંશ", total_hira_label: "કુલ હીરા", total_amount_label: "કુલ રકમ", total_upad_label: "કુલ ઉપાડ", net_amount_label: "ચોખ્ખી રકમ", backup_btn: "બેકઅપ ડાઉનલોડ કરો", restore_btn: "બેકઅપ પુનઃસ્થાપિત કરો", export_pdf_btn: "મહિનાનો PDF નિકાસ કરો", entries_for_label: "માટેની એન્ટ્રીઓ ", hira_entries_label: "હીરા હિસાબ", add_entry_label: "નવી હીરા એન્ટ્રી ઉમેરો", quantity_placeholder: "હીરા (નંગ)", rate_placeholder: "હીરા દીઠ ભાવ", save_entry_btn: "હીરા સાચવો", upad_entries_label: "ઉપાડ હિસાબ", add_upad_label: "નવો ઉપાડ ઉમેરો", amount_placeholder: "રકમ", note_placeholder_optional: "નોંધ (વૈકલ્પિક)", save_upad_btn: "ઉપાડ સાચવો", pdf_modal_title: "PDF ભાષા પસંદ કરો", pdf_modal_subtitle: "તમારા રિપોર્ટ માટે ભાષા પસંદ કરો.", choice_modal_title: "એન્ટ્રીનો પ્રકાર પસંદ કરો", choice_modal_subtitle: "માટે તમે શું ઉમેરવા માંગો છો", add_hira_choice_btn: "હીરા ઉમેરો / એન્ટ્રી જુઓ", add_upad_choice_btn: "ઉપાડ ઉમેરો / એન્ટ્રી જુઓ", hira_unit: "હીરા", upad_unit: "ઉપાડ", currency_symbol: "₹", months: ["જાન્યુઆરી", "ફેબ્રુઆરી", "માર્ચ", "એપ્રિલ", "મે", "જૂન", "જુલાઈ", "ઑગસ્ટ", "સપ્ટેમ્બર", "ઑક્ટોબર", "નવેમ્બર", "ડિસેમ્બર"], weekdays: ["સોમ", "મંગળ", "બુધ", "ગુરુ", "શુક્ર", "શનિ", "રવિ"], pdf: { title: "હીરા હિસાબ રિપોર્ટ", hiraTitle: "હીરા કામની વિગતો", upadTitle: "ઉપાડ (એડવાન્સ) ની વિગતો", finalSummaryTitle: "અંતિમ સારાંશ", totalHira: "કુલ હીરા", totalAmount: "કુલ રકમ", totalUpad: "કુલ ઉપાડ", netAmount: "ચોખ્ખી ચૂકવવાપાત્ર રકમ", date: "તારીખ", qty: "હીરા (નંગ)", rate: "ભાવ", total: "કુલ રકમ", note: "નોંધ", amount: "રકમ", generatedOn: "ના રોજ જનરેટ થયેલ" } }
+            gu: { main_title: "હીરા હિસાબ ડાયરી", main_subtitle: "તમારો અંગત હીરા હિસાબ", month_label: "મહિનો અને વર્ષ પસંદ કરો", monthly_summary_title: "માસિક સારાંશ", total_hira_label: "કુલ હીરા", total_amount_label: "કુલ રકમ", total_upad_label: "કુલ ઉપાડ", net_amount_label: "ચોખ્ખી રકમ", backup_btn: "બેકઅપ ડાઉનલોડ કરો", restore_btn: "બેકઅપ પુનઃસ્થાપિત કરો", export_pdf_btn: "મહિનાનો PDF નિકાસ કરો", entries_for_label: "માટેની એન્ટ્રીઓ ", hira_entries_label: "હીરા હિસાબ", add_entry_label: "નવી હીરા એન્ટ્રી ઉમેરો", quantity_placeholder: "હીરા (નંગ)", rate_placeholder: "હીરા દીઠ ભાવ", save_entry_btn: "હીરા સાચવો", upad_entries_label: "ઉપાડ હિસાબ", add_upad_label: "નવો ઉપાડ ઉમેરો", amount_placeholder: "રકમ", note_placeholder_optional: "નોંધ (વૈકલ્પિક)", save_upad_btn: "ઉપાડ સાચવો", pdf_modal_title: "PDF ભાષા પસંદ કરો", pdf_modal_subtitle: "તમારા રિપોર્ટ માટે ભાષા પસંદ કરો.", choice_modal_title: "એન્ટ્રીનો પ્રકાર પસંદ કરો", choice_modal_subtitle: "માટે તમે શું ઉમેરવા માંગો છો", add_hira_choice_btn: "હીરા ઉમેરો / એન્ટ્રી જુઓ", add_upad_choice_btn: "ઉપાડ ઉમેરો / એન્ટ્રી જુઓ", hira_unit: "હીરા", upad_unit: "ઉપાડ", currency_symbol: "₹", months: ["જાન્યુઆરી", "ફેબ્રુઆરી", "માર્ચ", "એપ્રિલ", "મે", "જૂન", "જુલાઈ", "ઑગસ્ટ", "સપ્ટેમ્બર", "ઑક્ટોબર", "નવેમ્બર", "ડિસેમ્બર"], weekdays: ["સોમ", "મંગળ", "બુધ", "ગુરુ", "શુક્ર", "શનિ", "રવિ"], pdf: { title: "હીરા હિસાબ રિપોર્ટ", hiraTitle: "હીરા કામની વિગતો", upadTitle: "ઉપાડ (એડવાન્સ) ની વિગતો", finalSummaryTitle: "અંતિમ સારાંશ", totalHira: "કુલ હીરા", totalAmount: "કુલ રકમ", totalUpad: "કુલ ઉપાડ", netAmount: "ચોખ્ખી ચૂકવવાપાત્ર રકમ", date: "તારીખ", qty: "હીરા (નંગ)", rate: "ભાવ", total: "કુલ રકમ", note: "નોંધ", amount: "રકમ", generatedOn: "ના રોજ જનમરેટ થયેલ" } }
         };
         let currentLang = 'en', db, auth, userId, currentYear, currentMonth, unsubscribe, selectedDate;
         let currentDayData = { date: null, entries: [], upadEntries: [] }, entriesMap = new Map();
@@ -448,6 +460,10 @@
 
         async function initializeAppAndAuth() {
             try {
+                if (firebaseConfig.apiKey.startsWith("AIza") === false && typeof __firebase_config === 'undefined') {
+                    dom.loader.innerHTML = `<p class="text-red-500 text-center p-4">Firebase is not configured. Please add your Firebase project configuration in index.html</p>`;
+                    return;
+                }
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app); auth = getAuth(app);
                 onAuthStateChanged(auth, async (user) => {
@@ -455,8 +471,16 @@
                         userId = user.uid; dom.loader.style.display = 'none'; dom.mainContent.classList.remove('hidden');
                         initializeDateTime(); fetchAndRender();
                     } else {
-                        if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken);
-                        else await signInAnonymously(auth);
+                        if (initialAuthToken) {
+                            try {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } catch (error) {
+                                console.error("Error with custom token, signing in anonymously:", error);
+                                await signInAnonymously(auth);
+                            }
+                        } else {
+                            await signInAnonymously(auth);
+                        }
                     }
                 });
             } catch (error) { console.error("Firebase Init Error:", error); dom.loader.innerHTML = `<p class="text-red-500">${error.message}</p>`; }
@@ -823,3 +847,4 @@
     </script>
 </body>
 </html>
+
