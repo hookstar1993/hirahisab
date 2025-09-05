@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hira Hisab Diary</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&family=Mozilla+Headline:wght@200..700&family=Mukta+Vaani:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        :root {
+            --bg-light: #FFFAEB; /* Cream */
+            --text-light: #1E293B; /* Slate 800 */
+            --accent-light: #105652; /* Teal */
+            --border-light: rgba(16, 86, 82, 0.75);
+
+            --bg-dark: #1E293B; /* Slate 800 */
+            --text-dark: #E2E8F0; /* Slate 200 */
+            --accent-dark: #5EEAD4; /* Teal 300 */
+            --border-dark: rgba(94, 234, 212, 0.5);
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Jost', 'Mukta Vaani', sans-serif;
+            background-color: #F1F5F9; /* slate-100 */
+            color: var(--text-light);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .dark body {
+            background-color: #0F172A; /* slate-900 */
+            color: var(--text-dark);
+        }
+        h1, h2, h3, .font-headline {
+            font-family: 'Mozilla Headline', 'Mukta Vaani', sans-serif;
+        }
+
+        .themed-card {
+            background: var(--bg-light);
+            color: #000;
+            box-shadow: 0px 105px 63px rgba(0, 0, 0, 0.05), 0px 47px 47px rgba(0, 0, 0, 0.09), 0px 12px 26px rgba(0, 0, 0, 0.1), 0px 0px 0px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-light);
+            border-radius: 1.5rem; /* 24px */
+        }
+        .dark .themed-card {
+            background-color: var(--bg-dark);
+            color: var(--text-dark);
+            border-color: var(--border-dark);
+            box-shadow: 0px 47px 47px rgba(0, 0, 0, 0.2), 0px 12px 26px rgba(0, 0, 0, 0.3);
+        }
+        
+        .themed-input {
+            background-color: #FBF3E4; /* Lighter cream */
+            border: 1px solid var(--border-light);
+            color: #000;
+        }
+        .themed-input:focus {
+            border: 1px solid transparent;
+            box-shadow: 0px 0px 0px 2px var(--accent-light);
+        }
+        .dark .themed-input {
+            background-color: #334155; /* Slate 700 */
+            border-color: var(--border-dark);
+            color: var(--text-dark);
+        }
+        .dark .themed-input:focus {
+            box-shadow: 0px 0px 0px 2px var(--accent-dark);
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner {
+            border: 4px solid rgba(16, 86, 82, 0.2);
+            border-left-color: var(--accent-light);
+            border-radius: 50%; width: 40px; height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        .dark .spinner {
+            border-color: rgba(94, 234, 212, 0.2);
+            border-left-color: var(--accent-dark);
+        }
+        
+        .calendar-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+        
+        .day-cell {
+            min-height: 120px; 
+            transition: all 0.2s ease-in-out;
+            background-color: #FFFCF5; 
+            border-radius: 1rem;
+            padding: 0.5rem; /* 8px */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .dark .day-cell { background-color: #283649; }
+
+        .day-cell:not(.disabled):hover {
+            transform: translateY(-2px);
+            background-color: #FBF3E4;
+        }
+        .day-cell .day-number {
+            font-size: 0.75rem; /* 12px */
+            line-height: 1rem; /* 16px */
+            font-weight: 500;
+            align-self: flex-end; /* Pushes the number to the right */
+        }
+
+        .day-cell.today .day-number {
+            background-color: var(--accent-light); color: white;
+            border-radius: 9999px; width: 22px; height: 22px;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .dark .day-cell.today .day-number {
+            background-color: var(--accent-dark); color: #000;
+        }
+        
+        .day-cell .entry-content {
+            text-align: center;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .day-cell.has-entry { background-color: #F0EAD6; }
+        .dark .day-cell.has-entry { background-color: #334155; }
+
+        .tab-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem 0.75rem 0 0;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            background-color: transparent;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            background-color: rgba(0,0,0,0.05);
+            border-bottom-color: var(--accent-light);
+        }
+        .dark .tab-btn.active {
+            background-color: rgba(255,255,255,0.05);
+            border-bottom-color: var(--accent-dark);
+        }
+
+        .lang-separator {
+            color: #94A3B8; /* slate-400 */
+            margin: 0 0.25rem;
+        }
+        .dark .lang-separator {
+            color: #64748B; /* slate-500 */
+        }
+        
+        /* PDF Button CSS */
+        .button {
+          -moz-appearance: none; -webkit-appearance: none; appearance: none;
+          border: none; background: none; color: #0f1923; cursor: pointer;
+          position: relative; padding: 8px; text-transform: uppercase;
+          font-weight: bold; font-size: 14px; transition: all .15s ease;
+        }
+        .dark .button { color: var(--text-dark); }
+
+        .button::before, .button::after {
+          content: ''; display: block; position: absolute;
+          right: 0; left: 0; height: calc(50% - 5px);
+          border: 1px solid #7D8082; transition: all .15s ease;
+        }
+        .dark .button::before, .dark .button::after { border-color: var(--border-dark); }
+        
+        .button::before { top: 0; border-bottom-width: 0; }
+        .button::after { bottom: 0; border-top-width: 0; }
+        .button:active, .button:focus { outline: none; }
+        .button:active::before, .button:active::after { right: 3px; left: 3px; }
+        .button:active::before { top: 3px; }
+        .button:active::after { bottom: 3px; }
+
+        .button_lg {
+          position: relative; display: block; padding: 10px 20px;
+          color: #fff; background-color: #0f1923;
+          overflow: hidden; box-shadow: inset 0px 0px 0px 1px transparent;
+        }
+        .dark .button_lg { background-color: var(--bg-dark); color: var(--text-dark); }
+        
+        .button_lg::before {
+          content: ''; display: block; position: absolute;
+          top: 0; left: 0; width: 2px; height: 2px; background-color: #0f1923;
+        }
+        .dark .button_lg::before { background-color: var(--bg-dark); }
+        
+        .button_lg::after {
+          content: ''; display: block; position: absolute;
+          right: 0; bottom: 0; width: 4px; height: 4px; background-color: #0f1923;
+          transition: all .2s ease;
+        }
+        .dark .button_lg::after { background-color: var(--bg-dark); }
+        
+        .button_sl {
+          display: block; position: absolute;
+          top: 0; bottom: -1px; left: -8px; width: 0;
+          background-color: #ff4655; transform: skew(-15deg);
+          transition: all .2s ease;
+        }
+        .button_text { position: relative; }
+        .button:hover { color: #fff; } /* Keep text white on hover */
+        .button:hover .button_sl { width: calc(100% + 15px); }
+        .button:hover .button_lg::after { background-color: #fff; }
+
+
+        #pdf-content-wrapper {
+             width: 210mm; padding: 15mm; background-color: white; color: #333;
+        }
+        #pdf-content-wrapper h2 { font-size: 20px; margin-top: 1rem; border-bottom: 2px solid #eee; padding-bottom: 5px;}
+        #pdf-content-wrapper table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        #pdf-content-wrapper th, #pdf-content-wrapper td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        #pdf-content-wrapper th { background-color: #f2f2f2; font-weight: bold; }
+        #pdf-content-wrapper .pdf-footer { margin-top: 2rem; text-align: center; font-size: 0.8rem; color: #777; }
+        #pdf-content-wrapper .summary-section { margin-top: 1.5rem; padding: 1rem; background-color:#f9f9f9; border-radius: 8px; }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 transition-colors duration-300">
+
+    <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 relative">
+        <div class="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-3 z-10">
+            <button id="lang-switcher-btn" class="px-3 py-2 text-sm rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-md ring-1 ring-slate-900/10 dark:ring-white/10 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors flex items-center">
+                <span class="lang-en">EN</span><span class="lang-separator">/</span><span class="lang-gu">ગુજરાતી</span>
+            </button>
+            <button id="theme-toggle-btn" class="h-10 w-10 flex items-center justify-center rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-md ring-1 ring-slate-900/10 dark:ring-white/10 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors">
+                <svg id="theme-icon-sun" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <svg id="theme-icon-moon" class="h-6 w-6 text-indigo-400 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            </button>
+        </div>
+        
+        <header class="text-center mb-8 pt-12">
+            <h1 class="text-5xl font-bold text-slate-800 dark:text-white font-headline" data-lang-key="main_title"></h1>
+            <p class="text-slate-500 dark:text-slate-400 mt-2" data-lang-key="main_subtitle"></p>
+        </header>
+
+        <div id="loader" class="flex justify-center items-center h-64"><div class="spinner"></div></div>
+        
+        <main id="main-content" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 themed-card p-4 sm:p-6">
+                 <div id="calendar-weekdays" class="grid calendar-grid text-center font-semibold mb-2"></div>
+                 <div id="calendar-grid" class="grid calendar-grid gap-2"></div>
+            </div>
+            <div class="lg:col-span-1 flex flex-col gap-8">
+                 <div class="themed-card p-6">
+                    <label for="month-select" class="font-medium block mb-2 text-center opacity-80" data-lang-key="month_label"></label>
+                    <div class="flex items-center gap-3">
+                        <select id="month-select" class="w-full themed-input rounded-lg p-2"></select>
+                        <input type="number" id="year-select" class="themed-input rounded-lg p-2 w-28">
+                    </div>
+                </div>
+                <div class="themed-card p-6">
+                    <h3 class="font-headline text-2xl text-center" data-lang-key="monthly_summary_title"></h3>
+                    <hr class="border-t border-[var(--border-light)] dark:border-[var(--border-dark)] my-4 mx-auto w-1/2">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-baseline">
+                            <p class="opacity-70" data-lang-key="total_hira_label"></p>
+                            <p id="total-hira" class="text-2xl font-bold"></p>
+                        </div>
+                        <div class="flex justify-between items-baseline">
+                            <p class="opacity-70" data-lang-key="total_amount_label"></p>
+                            <p id="total-amount" class="text-2xl font-bold text-green-700 dark:text-green-400"></p>
+                        </div>
+                        <div class="flex justify-between items-baseline">
+                            <p class="opacity-70" data-lang-key="total_upad_label"></p>
+                            <p id="total-upad" class="text-2xl font-bold text-red-600 dark:text-red-400"></p>
+                        </div>
+                        <hr class="border-t-2 border-dashed border-[var(--border-light)] dark:border-[var(--border-dark)] my-2">
+                        <div class="flex justify-between items-center mt-2">
+                            <p class="font-bold" data-lang-key="net_amount_label"></p>
+                            <p id="net-amount" class="text-3xl font-extrabold text-blue-800 dark:text-blue-300"></p>
+                        </div>
+                    </div>
+                </div>
+                 <div class="themed-card p-6 flex flex-col gap-4">
+                    <button id="pdf-btn" class="button w-full">
+                        <span class="button_lg">
+                            <span class="button_sl"></span>
+                            <span class="button_text" data-lang-key="export_pdf_btn"></span>
+                        </span>
+                    </button>
+                    <button id="backup-btn" class="w-full px-4 py-3 rounded-xl font-semibold text-sm text-white bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 transition-all transform hover:scale-105" data-lang-key="backup_btn"></button>
+                    <button id="restore-btn" class="w-full px-4 py-3 rounded-xl font-semibold text-sm text-white bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 transition-all transform hover:scale-105" data-lang-key="restore_btn"></button>
+                    <input type="file" id="backup-file-input" class="hidden" accept=".json">
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="day-details-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="themed-card p-6 w-full max-w-lg flex flex-col" style="height: 95vh; max-height: 700px;">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-bold" data-lang-key="entries_for_label">Entries for <span id="modal-date"></span></h3>
+                <button id="close-day-modal-btn" class="opacity-70 hover:opacity-100 text-2xl leading-none">&times;</button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex items-center border-b-2 border-slate-200 dark:border-slate-700 mt-4">
+                <button id="hira-tab-btn" class="tab-btn active" data-lang-key="hira_entries_label">Hira Entries</button>
+                <button id="upad-tab-btn" class="tab-btn" data-lang-key="upad_entries_label">Upad Entries</button>
+            </div>
+            
+            <!-- Hira Section / Tab Panel -->
+            <div id="hira-section" class="flex-1 flex flex-col min-h-0 pt-4">
+                <div id="diamond-list" class="flex-grow overflow-y-auto space-y-2 pr-2 -mr-2 mb-2"></div>
+                <div id="day-total" class="text-right font-bold text-lg p-2 border-t border-[var(--border-light)] dark:border-[var(--border-dark)] mt-auto"></div>
+                <form id="add-diamond-form" class="mt-2">
+                    <p class="font-semibold mb-2" data-lang-key="add_entry_label"></p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <input type="number" id="quantity" name="quantity" required class="sm:col-span-1 themed-input block w-full px-3 py-2 rounded-lg text-sm" data-lang-placeholder="quantity_placeholder">
+                        <input type="text" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" id="rate" name="rate" required class="sm:col-span-1 themed-input block w-full px-3 py-2 rounded-lg text-sm" data-lang-placeholder="rate_placeholder">
+                        <button type="submit" class="sm:col-span-1 px-5 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400" data-lang-key="save_entry_btn"></button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Upad Section / Tab Panel -->
+            <div id="upad-section" class="flex-1 flex flex-col min-h-0 pt-4 hidden">
+                 <div id="upad-list" class="flex-grow overflow-y-auto space-y-2 pr-2 -mr-2 mb-2"></div>
+                 <div id="upad-total" class="text-right font-bold text-lg p-2 border-t border-[var(--border-light)] dark:border-[var(--border-dark)] mt-auto"></div>
+                 <form id="add-upad-form" class="mt-2">
+                    <p class="font-semibold mb-2" data-lang-key="add_upad_label"></p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <input type="number" id="upad-amount" required class="sm:col-span-1 themed-input block w-full px-3 py-2 rounded-lg text-sm" data-lang-placeholder="amount_placeholder">
+                        <input type="text" id="upad-note" class="sm:col-span-1 themed-input block w-full px-3 py-2 rounded-lg text-sm" data-lang-placeholder="note_placeholder_optional">
+                        <button type="submit" class="sm:col-span-1 px-5 py-2 rounded-lg font-semibold text-white bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-400" data-lang-key="save_upad_btn"></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div id="entry-choice-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="themed-card p-8 w-full max-w-sm text-center relative">
+            <button id="close-choice-modal-btn" class="absolute top-2 right-2 opacity-70 hover:opacity-100 text-3xl leading-none">&times;</button>
+            <h3 class="text-xl font-bold mb-2 font-headline" data-lang-key="choice_modal_title"></h3>
+            <p class="opacity-70 mb-6"><span data-lang-key="choice_modal_subtitle"></span> <span id="choice-modal-date" class="font-semibold"></span></p>
+            <div class="flex flex-col gap-3">
+                <button id="add-hira-choice-btn" class="w-full px-6 py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400" data-lang-key="add_hira_choice_btn"></button>
+                <button id="add-upad-choice-btn" class="w-full px-6 py-3 rounded-xl font-semibold text-white bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-400" data-lang-key="add_upad_choice_btn"></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pdf-lang-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="themed-card p-8 w-full max-w-xs text-center relative">
+             <button id="close-lang-modal-btn" class="absolute top-2 right-2 opacity-70 hover:opacity-100 text-3xl leading-none">&times;</button>
+            <h3 class="text-xl font-bold mb-2 font-headline" data-lang-key="pdf_modal_title"></h3>
+            <p class="opacity-70 mb-6" data-lang-key="pdf_modal_subtitle"></p>
+            <div class="flex flex-col gap-3">
+                <button id="export-english-btn" class="w-full px-6 py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400">English</button>
+                <button id="export-gujarati-btn" class="w-full px-6 py-3 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400">ગુજરાતી</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pdf-content-wrapper" class="absolute -left-[9999px] top-auto w-auto h-auto overflow-hidden"></div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, onSnapshot, query, where, getDocs, setDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'hira-hisab-diary';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "test", authDomain: "test.firebaseapp.com", projectId: "test" };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : undefined;
+
+        const translations = {
+            en: { main_title: "Hira Hisab Diary", main_subtitle: "Your Personal Diamond Calculation Diary", month_label: "Select Month & Year", monthly_summary_title: "Monthly Summary", total_hira_label: "Total Hira", total_amount_label: "Total Amount", total_upad_label: "Total Upad", net_amount_label: "Net Amount", backup_btn: "Download Backup", restore_btn: "Restore from Backup", export_pdf_btn: "Export Month as PDF", entries_for_label: "Entries for ", hira_entries_label: "Hira Hisab", add_entry_label: "Add New Hira Entry", quantity_placeholder: "Diamonds (Qty)", rate_placeholder: "Rate per Diamond", save_entry_btn: "Save Hira", upad_entries_label: "Upad Hisab", add_upad_label: "Add New Upad Entry", amount_placeholder: "Amount", note_placeholder_optional: "Note (Optional)", save_upad_btn: "Save Upad", pdf_modal_title: "Select PDF Language", pdf_modal_subtitle: "Choose the language for your report.", choice_modal_title: "Select Entry Type", choice_modal_subtitle: "What would you like to add for", add_hira_choice_btn: "Add Hira / View Entries", add_upad_choice_btn: "Add Upad / View Entries", hira_unit: "Hira", upad_unit: "Upad", currency_symbol: "₹", months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], pdf: { title: "Hira Hisab Report", hiraTitle: "Hira Work Details", upadTitle: "Upad (Advance) Details", finalSummaryTitle: "Final Summary", totalHira: "Total Hira", totalAmount: "Total Amount", totalUpad: "Total Upad", netAmount: "Net Payable Amount", date: "Date", qty: "Diamonds (Qty)", rate: "Rate", total: "Total Amount", note: "Note", amount: "Amount", generatedOn: "Generated on" } },
+            gu: { main_title: "હીરા હિસાબ ડાયરી", main_subtitle: "તમારો અંગત હીરા હિસાબ", month_label: "મહિનો અને વર્ષ પસંદ કરો", monthly_summary_title: "માસિક સારાંશ", total_hira_label: "કુલ હીરા", total_amount_label: "કુલ રકમ", total_upad_label: "કુલ ઉપાડ", net_amount_label: "ચોખ્ખી રકમ", backup_btn: "બેકઅપ ડાઉનલોડ કરો", restore_btn: "બેકઅપ પુનઃસ્થાપિત કરો", export_pdf_btn: "મહિનાનો PDF નિકાસ કરો", entries_for_label: "માટેની એન્ટ્રીઓ ", hira_entries_label: "હીરા હિસાબ", add_entry_label: "નવી હીરા એન્ટ્રી ઉમેરો", quantity_placeholder: "હીરા (નંગ)", rate_placeholder: "હીરા દીઠ ભાવ", save_entry_btn: "હીરા સાચવો", upad_entries_label: "ઉપાડ હિસાબ", add_upad_label: "નવો ઉપાડ ઉમેરો", amount_placeholder: "રકમ", note_placeholder_optional: "નોંધ (વૈકલ્પિક)", save_upad_btn: "ઉપાડ સાચવો", pdf_modal_title: "PDF ભાષા પસંદ કરો", pdf_modal_subtitle: "તમારા રિપોર્ટ માટે ભાષા પસંદ કરો.", choice_modal_title: "એન્ટ્રીનો પ્રકાર પસંદ કરો", choice_modal_subtitle: "માટે તમે શું ઉમેરવા માંગો છો", add_hira_choice_btn: "હીરા ઉમેરો / એન્ટ્રી જુઓ", add_upad_choice_btn: "ઉપાડ ઉમેરો / એન્ટ્રી જુઓ", hira_unit: "હીરા", upad_unit: "ઉપાડ", currency_symbol: "₹", months: ["જાન્યુઆરી", "ફેબ્રુઆરી", "માર્ચ", "એપ્રિલ", "મે", "જૂન", "જુલાઈ", "ઑગસ્ટ", "સપ્ટેમ્બર", "ઑક્ટોબર", "નવેમ્બર", "ડિસેમ્બર"], weekdays: ["સોમ", "મંગળ", "બુધ", "ગુરુ", "શુક્ર", "શનિ", "રવિ"], pdf: { title: "હીરા હિસાબ રિપોર્ટ", hiraTitle: "હીરા કામની વિગતો", upadTitle: "ઉપાડ (એડવાન્સ) ની વિગતો", finalSummaryTitle: "અંતિમ સારાંશ", totalHira: "કુલ હીરા", totalAmount: "કુલ રકમ", totalUpad: "કુલ ઉપાડ", netAmount: "ચોખ્ખી ચૂકવવાપાત્ર રકમ", date: "તારીખ", qty: "હીરા (નંગ)", rate: "ભાવ", total: "કુલ રકમ", note: "નોંધ", amount: "રકમ", generatedOn: "ના રોજ જનરેટ થયેલ" } }
+        };
+        let currentLang = 'en', db, auth, userId, currentYear, currentMonth, unsubscribe, selectedDate;
+        let currentDayData = { date: null, entries: [], upadEntries: [] }, entriesMap = new Map();
+
+        const dom = {
+            loader: document.getElementById('loader'), mainContent: document.getElementById('main-content'), monthSelect: document.getElementById('month-select'),
+            yearSelect: document.getElementById('year-select'), calendarGrid: document.getElementById('calendar-grid'), totalHiraEl: document.getElementById('total-hira'),
+            totalAmountEl: document.getElementById('total-amount'), totalUpadEl: document.getElementById('total-upad'), netAmountEl: document.getElementById('net-amount'),
+            backupBtn: document.getElementById('backup-btn'), pdfBtn: document.getElementById('pdf-btn'), restoreBtn: document.getElementById('restore-btn'), 
+            backupFileInput: document.getElementById('backup-file-input'), dayDetailsModal: document.getElementById('day-details-modal'),
+            modalDateEl: document.getElementById('modal-date'), closeDayModalBtn: document.getElementById('close-day-modal-btn'), diamondListEl: document.getElementById('diamond-list'),
+            dayTotalEl: document.getElementById('day-total'), addDiamondForm: document.getElementById('add-diamond-form'), quantityInput: document.getElementById('quantity'),
+            rateInput: document.getElementById('rate'), pdfLangModal: document.getElementById('pdf-lang-modal'), exportEnglishBtn: document.getElementById('export-english-btn'),
+            exportGujaratiBtn: document.getElementById('export-gujarati-btn'), closeLangModalBtn: document.getElementById('close-lang-modal-btn'),
+            langSwitcherBtn: document.getElementById('lang-switcher-btn'), themeToggleBtn: document.getElementById('theme-toggle-btn'),
+            themeIconSun: document.getElementById('theme-icon-sun'), themeIconMoon: document.getElementById('theme-icon-moon'),
+            upadListEl: document.getElementById('upad-list'), upadTotalEl: document.getElementById('upad-total'), addUpadForm: document.getElementById('add-upad-form'),
+            upadAmountInput: document.getElementById('upad-amount'), upadNoteInput: document.getElementById('upad-note'),
+            entryChoiceModal: document.getElementById('entry-choice-modal'), closeChoiceModalBtn: document.getElementById('close-choice-modal-btn'),
+            choiceModalDate: document.getElementById('choice-modal-date'), addHiraChoiceBtn: document.getElementById('add-hira-choice-btn'),
+            addUpadChoiceBtn: document.getElementById('add-upad-choice-btn'),
+            hiraTabBtn: document.getElementById('hira-tab-btn'), upadTabBtn: document.getElementById('upad-tab-btn'),
+            hiraSection: document.getElementById('hira-section'), upadSection: document.getElementById('upad-section'),
+        };
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners(); setupTheme(); setupLanguage(); initializeAppAndAuth();
+        });
+
+        function setupTheme() {
+            const savedTheme = localStorage.getItem('hira-hisab-theme');
+            const isDark = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.classList.toggle('dark', isDark);
+            dom.themeIconSun.classList.toggle('hidden', isDark);
+            dom.themeIconMoon.classList.toggle('hidden', !isDark);
+        }
+
+        function setupLanguage() {
+            const savedLang = localStorage.getItem('hira-hisab-lang') || 'en';
+            switchLanguage(savedLang);
+        }
+        
+        function switchLanguage(lang) {
+            currentLang = lang; localStorage.setItem('hira-hisab-lang', lang); updateUIText();
+            if (userId) { initializeDateTime(); renderCalendar(currentYear, currentMonth, entriesMap); }
+            const enSpan = dom.langSwitcherBtn.querySelector('.lang-en');
+            const guSpan = dom.langSwitcherBtn.querySelector('.lang-gu');
+            if (lang === 'en') {
+                enSpan.className = 'lang-en font-bold text-slate-800 dark:text-white';
+                guSpan.className = 'lang-gu font-normal text-slate-500 dark:text-slate-400';
+            } else {
+                guSpan.className = 'lang-gu font-bold text-slate-800 dark:text-white';
+                enSpan.className = 'lang-en font-normal text-slate-500 dark:text-slate-400';
+            }
+        }
+
+        function updateUIText() {
+            document.querySelectorAll('[data-lang-key]').forEach(el => {
+                const key = el.dataset.langKey, translation = translations[currentLang][key];
+                if (translation !== undefined) el.textContent = translation;
+            });
+            document.querySelectorAll('[data-lang-placeholder]').forEach(el => {
+                const key = el.dataset.langPlaceholder, translation = translations[currentLang][key];
+                if (translation !== undefined) el.placeholder = translation;
+            });
+            const weekdaysContainer = document.getElementById('calendar-weekdays');
+            weekdaysContainer.innerHTML = '';
+            translations[currentLang].weekdays.forEach(day => { weekdaysContainer.innerHTML += `<div>${day}</div>`; });
+        }
+
+        async function initializeAppAndAuth() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app); auth = getAuth(app);
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid; dom.loader.style.display = 'none'; dom.mainContent.classList.remove('hidden');
+                        initializeDateTime(); fetchAndRender();
+                    } else {
+                        if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken);
+                        else await signInAnonymously(auth);
+                    }
+                });
+            } catch (error) { console.error("Firebase Init Error:", error); dom.loader.innerHTML = `<p class="text-red-500">${error.message}</p>`; }
+        }
+
+        function initializeDateTime() {
+            const today = new Date();
+            if (!currentYear) currentYear = today.getFullYear();
+            if (currentMonth === undefined) currentMonth = today.getMonth();
+            const monthNames = translations[currentLang].months;
+            dom.monthSelect.innerHTML = ''; monthNames.forEach((month, index) => dom.monthSelect.appendChild(new Option(month, index)));
+            dom.monthSelect.value = currentMonth; dom.yearSelect.value = currentYear;
+        }
+
+        function setupEventListeners() {
+            dom.themeToggleBtn.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('hira-hisab-theme', isDark ? 'dark' : 'light');
+                dom.themeIconSun.classList.toggle('hidden', isDark); dom.themeIconMoon.classList.toggle('hidden', !isDark);
+            });
+            dom.langSwitcherBtn.addEventListener('click', () => { switchLanguage(currentLang === 'en' ? 'gu' : 'en'); });
+            dom.monthSelect.addEventListener('change', handleDateChange); dom.yearSelect.addEventListener('change', handleDateChange);
+            dom.calendarGrid.addEventListener('click', handleCalendarClick); dom.addDiamondForm.addEventListener('submit', handleAddEntry);
+            dom.addUpadForm.addEventListener('submit', handleAddUpad);
+            dom.closeDayModalBtn.addEventListener('click', () => dom.dayDetailsModal.classList.add('hidden'));
+            dom.diamondListEl.addEventListener('click', handleDeleteEntry); dom.upadListEl.addEventListener('click', handleDeleteUpad);
+            dom.backupBtn.addEventListener('click', handleBackup);
+            dom.pdfBtn.addEventListener('click', showLanguageModal); dom.restoreBtn.addEventListener('click', () => dom.backupFileInput.click());
+            dom.backupFileInput.addEventListener('change', handleRestore); dom.exportEnglishBtn.addEventListener('click', () => generatePdfWithLanguage('en'));
+            dom.exportGujaratiBtn.addEventListener('click', () => generatePdfWithLanguage('gu')); dom.closeLangModalBtn.addEventListener('click', () => dom.pdfLangModal.classList.add('hidden'));
+            dom.closeChoiceModalBtn.addEventListener('click', () => dom.entryChoiceModal.classList.add('hidden'));
+            dom.addHiraChoiceBtn.addEventListener('click', () => {
+                dom.entryChoiceModal.classList.add('hidden');
+                showDayDetails(selectedDate, 'hira');
+            });
+            dom.addUpadChoiceBtn.addEventListener('click', () => {
+                dom.entryChoiceModal.classList.add('hidden');
+                showDayDetails(selectedDate, 'upad');
+            });
+            dom.hiraTabBtn.addEventListener('click', () => switchTab('hira'));
+            dom.upadTabBtn.addEventListener('click', () => switchTab('upad'));
+        }
+        
+        function fetchAndRender() {
+            if (!userId) return; if (unsubscribe) unsubscribe();
+            const startDate = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
+            const endDate = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
+            const entriesCollection = collection(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`);
+            const q = query(entriesCollection, where("date", ">=", startDate), where("date", "<=", endDate));
+            dom.calendarGrid.innerHTML = `<div class="col-span-7 text-center p-8 opacity-50">Loading...</div>`;
+            unsubscribe = onSnapshot(q, (querySnapshot) => {
+                entriesMap.clear();
+                querySnapshot.forEach((doc) => {
+                    const data = { docId: doc.id, ...doc.data() }; 
+                    entriesMap.set(data.date, data);
+                });
+
+                const monthlyData = Array.from(entriesMap.values());
+                renderCalendar(currentYear, currentMonth, entriesMap); 
+                updateMonthlySummary(monthlyData);
+
+                if (!dom.dayDetailsModal.classList.contains('hidden') && currentDayData.date) {
+                    const updatedDayData = entriesMap.get(currentDayData.date) || { date: currentDayData.date, entries: [], upadEntries: [] };
+                    currentDayData = updatedDayData; 
+                    renderDayEntryList(currentDayData.entries);
+                    renderUpadEntryList(currentDayData.upadEntries);
+                }
+
+            }, (error) => { console.error("Error fetching entries:", error); dom.calendarGrid.innerHTML = `<div class="col-span-7 text-center p-8 text-red-500">Could not load entries.</div>`; });
+        }
+        
+        function renderCalendar(year, month, currentEntriesMap) {
+            dom.calendarGrid.innerHTML = ''; const today = new Date(); today.setHours(0,0,0,0);
+            const firstDayOfMonth = new Date(year, month, 1), daysInMonth = new Date(year, month + 1, 0).getDate();
+            const startDayOfWeek = firstDayOfMonth.getDay(); // 0=Sun, 1=Mon, ...
+            const startDayIndex = (startDayOfWeek === 0) ? 6 : startDayOfWeek - 1; // 0=Mon, 1=Tue, ... 6=Sun
+
+            const t = translations[currentLang];
+            for (let i = 0; i < startDayIndex; i++) { dom.calendarGrid.insertAdjacentHTML('beforeend', '<div class="day-cell disabled rounded-2xl"></div>'); }
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day), dateString = date.toISOString().split('T')[0], isToday = date.getTime() === today.getTime();
+                const dayData = currentEntriesMap.get(dateString);
+                let cellContent = `<div class="day-number">${day}</div><div class="entry-content">`;
+                if (dayData?.entries?.length > 0) {
+                    const dailyTotalHira = dayData.entries.reduce((sum, e) => sum + e.quantity, 0);
+                    const dailyTotalAmount = dayData.entries.reduce((sum, e) => sum + (e.quantity * e.rate), 0);
+                    cellContent += `<p class="text-xs text-blue-600 dark:text-blue-400 font-medium">${dailyTotalHira} ${t.hira_unit}</p><p class="text-sm font-bold text-green-700 dark:text-green-400">${t.currency_symbol}${dailyTotalAmount.toLocaleString('en-IN')}</p>`;
+                }
+                 if (dayData?.upadEntries?.length > 0) {
+                    const dailyTotalUpad = dayData.upadEntries.reduce((sum, u) => sum + u.amount, 0);
+                    cellContent += `<p class="text-xs mt-1 text-red-600 dark:text-red-400 font-medium">${t.currency_symbol}${dailyTotalUpad.toLocaleString('en-IN')} ${t.upad_unit}</p>`;
+                }
+                cellContent += '</div>';
+                const cell = document.createElement('div');
+                cell.className = `day-cell group cursor-pointer`;
+                if(isToday) cell.classList.add('today'); if (dayData?.entries?.length > 0 || dayData?.upadEntries?.length > 0) cell.classList.add('has-entry');
+                cell.dataset.date = dateString; cell.innerHTML = cellContent;
+                dom.calendarGrid.appendChild(cell);
+            }
+        }
+        
+        function updateMonthlySummary(monthlyData) {
+            let totalHira = 0, totalAmount = 0, totalUpad = 0;
+            const t = translations[currentLang];
+            monthlyData.forEach(dayData => {
+                if (dayData.entries) {
+                    totalHira += dayData.entries.reduce((sum, e) => sum + e.quantity, 0);
+                    totalAmount += dayData.entries.reduce((sum, e) => sum + (e.quantity * e.rate), 0);
+                }
+                if (dayData.upadEntries) {
+                    totalUpad += dayData.upadEntries.reduce((sum, u) => sum + u.amount, 0);
+                }
+            });
+            const netAmount = totalAmount - totalUpad;
+            dom.totalHiraEl.textContent = totalHira; 
+            dom.totalAmountEl.textContent = `${t.currency_symbol}${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            dom.totalUpadEl.textContent = `${t.currency_symbol}${totalUpad.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            dom.netAmountEl.textContent = `${t.currency_symbol}${netAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        function showDayDetails(dateString, focusTarget) {
+            currentDayData = entriesMap.get(dateString) || { date: dateString, entries: [], upadEntries: [] };
+            dom.modalDateEl.textContent = new Date(dateString + 'T00:00:00').toLocaleDateString(currentLang === 'gu' ? 'gu-IN' : 'en-IN'); 
+            dom.addDiamondForm.reset(); dom.addUpadForm.reset();
+            
+            renderDayEntryList(currentDayData.entries); 
+            renderUpadEntryList(currentDayData.upadEntries);
+            
+            dom.dayDetailsModal.classList.remove('hidden'); 
+            dom.dayDetailsModal.classList.add('flex');
+            
+            switchTab(focusTarget);
+        }
+
+        function switchTab(target) {
+            if (target === 'hira') {
+                dom.hiraSection.classList.remove('hidden');
+                dom.upadSection.classList.add('hidden');
+                dom.hiraTabBtn.classList.add('active');
+                dom.upadTabBtn.classList.remove('active');
+                dom.quantityInput.focus();
+            } else { // upad
+                dom.upadSection.classList.remove('hidden');
+                dom.hiraSection.classList.add('hidden');
+                dom.upadTabBtn.classList.add('active');
+                dom.hiraTabBtn.classList.remove('active');
+                dom.upadAmountInput.focus();
+            }
+        }
+        
+        function renderDayEntryList(entries = []) {
+            const t = translations[currentLang];
+            dom.diamondListEl.innerHTML = '';
+            if (!entries || entries.length === 0) { dom.diamondListEl.innerHTML = `<p class="opacity-50 text-center p-4">No hira entries for this day.</p>`; }
+            else {
+                 entries.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach((entry) => {
+                    const item = document.createElement('div'); const total = entry.quantity * entry.rate; let timeHtml = '';
+                    if (entry.timestamp) timeHtml = `<span class="block text-xs opacity-60">${new Date(entry.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>`;
+                    item.className = 'grid grid-cols-3 items-center gap-2 bg-black/5 dark:bg-white/5 p-3 rounded-lg';
+                    item.innerHTML = `<div class="col-span-1"><span class="font-semibold">${entry.quantity} ${t.hira_unit}</span><span class="text-xs opacity-70"> @ ${t.currency_symbol}${entry.rate.toLocaleString('en-IN')}</span>${timeHtml}</div><div class="col-span-1 text-right"><span class="font-bold text-green-600 dark:text-green-400">${t.currency_symbol}${total.toLocaleString('en-IN')}</span></div><div class="col-span-1 text-right"><button data-id="${entry.id}" class="delete-entry-btn text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-bold text-lg">&times;</button></div>`;
+                    dom.diamondListEl.appendChild(item);
+                });
+            }
+            const dayTotalHira = entries ? entries.reduce((sum, e) => sum + e.quantity, 0) : 0;
+            const dayTotalAmount = entries ? entries.reduce((sum, e) => sum + (e.quantity * e.rate), 0) : 0;
+            dom.dayTotalEl.innerHTML = `<span class="font-normal opacity-70">${t.pdf.total}: </span> ${dayTotalHira} ${t.hira_unit} | ${t.currency_symbol}${dayTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        function renderUpadEntryList(upadEntries = []) {
+            const t = translations[currentLang];
+            dom.upadListEl.innerHTML = '';
+            if (!upadEntries || upadEntries.length === 0) { dom.upadListEl.innerHTML = `<p class="opacity-50 text-center p-4">No upad entries for this day.</p>`; }
+            else {
+                 upadEntries.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach((entry) => {
+                    const item = document.createElement('div'); let timeHtml = '';
+                    if (entry.timestamp) timeHtml = `<span class="block text-xs opacity-60">${new Date(entry.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>`;
+                    item.className = 'grid grid-cols-3 items-center gap-2 bg-black/5 dark:bg-white/5 p-3 rounded-lg';
+                    item.innerHTML = `<div class="col-span-2"><span class="font-semibold text-red-600 dark:text-red-400">${t.currency_symbol}${entry.amount.toLocaleString('en-IN')}</span><span class="text-xs opacity-70 ml-2">${entry.note || ''}</span>${timeHtml}</div><div class="col-span-1 text-right"><button data-id="${entry.id}" class="delete-upad-btn text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-bold text-lg">&times;</button></div>`;
+                    dom.upadListEl.appendChild(item);
+                });
+            }
+            const dayTotalUpad = upadEntries ? upadEntries.reduce((sum, e) => sum + e.amount, 0) : 0;
+            dom.upadTotalEl.innerHTML = `<span class="font-normal opacity-70">${t.pdf.total}: </span> ${t.currency_symbol}${dayTotalUpad.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        async function handleAddEntry(e) {
+            e.preventDefault(); if (!userId || !currentDayData.date) return;
+            const quantity = parseInt(dom.quantityInput.value), rate = parseFloat(dom.rateInput.value);
+            if (isNaN(quantity) || quantity <= 0 || isNaN(rate) || rate <= 0) return;
+            const newEntry = { id: crypto.randomUUID(), quantity, rate, timestamp: new Date().toISOString() };
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`, currentDayData.date);
+            try {
+                if (entriesMap.has(currentDayData.date)) await updateDoc(docRef, { entries: arrayUnion(newEntry) });
+                else await setDoc(docRef, { date: currentDayData.date, entries: [newEntry], upadEntries: [] });
+                dom.addDiamondForm.reset(); dom.quantityInput.focus();
+            } catch (error) { console.error("Error adding entry: ", error); }
+        }
+
+        async function handleAddUpad(e) {
+            e.preventDefault(); if (!userId || !currentDayData.date) return;
+            const amount = parseFloat(dom.upadAmountInput.value);
+            const note = dom.upadNoteInput.value.trim();
+            if (isNaN(amount) || amount <= 0) return;
+            const newUpadEntry = { id: crypto.randomUUID(), amount, note, timestamp: new Date().toISOString() };
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`, currentDayData.date);
+            try {
+                if (entriesMap.has(currentDayData.date)) await updateDoc(docRef, { upadEntries: arrayUnion(newUpadEntry) });
+                else await setDoc(docRef, { date: currentDayData.date, entries: [], upadEntries: [newUpadEntry] });
+                dom.addUpadForm.reset(); dom.upadAmountInput.focus();
+            } catch (error) { console.error("Error adding upad entry: ", error); }
+        }
+        
+        async function handleDeleteEntry(e) {
+            if (!e.target.classList.contains('delete-entry-btn')) return;
+            const entryId = e.target.dataset.id; if (!userId || !currentDayData.date || !entryId) return;
+            const entryToDelete = (currentDayData.entries || []).find(d => d.id === entryId); if (!entryToDelete) return;
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`, currentDayData.date);
+            try {
+                await updateDoc(docRef, { entries: arrayRemove(entryToDelete) });
+            } catch (error) { console.error("Error deleting entry:", error); }
+        }
+
+        async function handleDeleteUpad(e) {
+            if (!e.target.classList.contains('delete-upad-btn')) return;
+            const entryId = e.target.dataset.id; if (!userId || !currentDayData.date || !entryId) return;
+            const entryToDelete = (currentDayData.upadEntries || []).find(d => d.id === entryId); if (!entryToDelete) return;
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`, currentDayData.date);
+            try {
+                await updateDoc(docRef, { upadEntries: arrayRemove(entryToDelete) });
+            } catch (error) { console.error("Error deleting upad entry:", error); }
+        }
+        
+        function handleDateChange() {
+            currentMonth = parseInt(dom.monthSelect.value); currentYear = parseInt(dom.yearSelect.value);
+            if (!isNaN(currentMonth) && !isNaN(currentYear)) fetchAndRender();
+        }
+
+        function handleCalendarClick(e) {
+            const cell = e.target.closest('.day-cell');
+            if (!cell || cell.classList.contains('disabled')) return;
+            selectedDate = cell.dataset.date;
+            dom.choiceModalDate.textContent = new Date(selectedDate + 'T00:00:00').toLocaleDateString(currentLang === 'gu' ? 'gu-IN' : 'en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            dom.entryChoiceModal.classList.remove('hidden');
+            dom.entryChoiceModal.classList.add('flex');
+        }
+        
+        async function handleBackup() {
+            if (!userId) return; dom.backupBtn.disabled = true;
+            try {
+                const entriesCollection = collection(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`);
+                const querySnapshot = await getDocs(entriesCollection); const backupData = [];
+                querySnapshot.forEach((doc) => backupData.push(doc.data()));
+                if (backupData.length === 0) { alert("No data to back up."); return; }
+                const jsonString = JSON.stringify(backupData, null, 2); const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob); const a = document.createElement('a');
+                a.href = url; a.download = `hira-hisab-backup-${new Date().toISOString().split('T')[0]}.json`;
+                a.click(); URL.revokeObjectURL(url);
+            } catch (error) { console.error("Error creating backup:", error); }
+            finally { dom.backupBtn.disabled = false; }
+        }
+
+        function showLanguageModal() {
+            if (entriesMap.size === 0) { alert("No data to export."); return; }
+            dom.pdfLangModal.classList.remove('hidden'); dom.pdfLangModal.classList.add('flex');
+        }
+
+        async function generatePdfWithLanguage(lang) {
+            dom.pdfLangModal.classList.add('hidden'); const originalButtonText = dom.pdfBtn.textContent;
+            dom.pdfBtn.textContent = 'Generating...'; dom.pdfBtn.disabled = true;
+            
+            const t = translations[lang].pdf;
+            const currencySymbol = translations[lang].currency_symbol;
+            const monthName = translations[lang].months[currentMonth];
+            const year = dom.yearSelect.value;
+            const timestamp = `${t.generatedOn}: ${new Date().toLocaleString(lang === 'gu' ? 'gu-IN' : 'en-IN', { dateStyle: 'long', timeStyle: 'short' })}`;
+            const pdfContentEl = document.getElementById('pdf-content-wrapper');
+
+            let hiraTableRows = '';
+            let upadTableRows = '';
+            let totalHira = 0, totalAmount = 0, totalUpad = 0;
+
+            [...entriesMap.values()].sort((a, b) => a.date.localeCompare(b.date)).forEach(dayData => {
+                if(dayData.entries && dayData.entries.length > 0) {
+                    dayData.entries.forEach(entry => {
+                        const formattedDate = new Date(dayData.date + 'T00:00:00').toLocaleDateString(lang === 'gu' ? 'gu-IN' : 'en-IN', {day: '2-digit', month: 'short'});
+                        const total = entry.quantity * entry.rate;
+                        hiraTableRows += `<tr><td>${formattedDate}</td><td>${entry.quantity}</td><td>${currencySymbol}${entry.rate.toLocaleString('en-IN')}</td><td>${currencySymbol}${total.toLocaleString('en-IN')}</td></tr>`;
+                        totalHira += entry.quantity;
+                        totalAmount += total;
+                    });
+                }
+                if(dayData.upadEntries && dayData.upadEntries.length > 0) {
+                    dayData.upadEntries.forEach(entry => {
+                        const formattedDate = new Date(dayData.date + 'T00:00:00').toLocaleDateString(lang === 'gu' ? 'gu-IN' : 'en-IN', {day: '2-digit', month: 'short'});
+                        upadTableRows += `<tr><td>${formattedDate}</td><td>${entry.note || '-'}</td><td>${currencySymbol}${entry.amount.toLocaleString('en-IN')}</td></tr>`;
+                        totalUpad += entry.amount;
+                    });
+                }
+            });
+            const netAmount = totalAmount - totalUpad;
+
+            const fontClass = lang === 'gu' ? "font-['Mukta_Vaani']" : "font-['Jost']";
+            const headlineFontClass = lang === 'gu' ? "font-['Mukta_Vaani']" : "font-['Mozilla_Headline']";
+            
+            pdfContentEl.innerHTML = `<div class="${fontClass}">
+                <h1 class="${headlineFontClass}" style="font-size: 24px; margin-bottom: 1rem; text-align: center;">${t.title}: ${monthName} ${year}</h1>
+                
+                ${hiraTableRows ? `<h2>${t.hiraTitle}</h2><table><thead><tr><th>${t.date}</th><th>${t.qty}</th><th>${t.rate}</th><th>${t.total}</th></tr></thead><tbody>${hiraTableRows}</tbody></table>` : ''}
+                
+                ${upadTableRows ? `<h2>${t.upadTitle}</h2><table><thead><tr><th>${t.date}</th><th>${t.note}</th><th>${t.amount}</th></tr></thead><tbody>${upadTableRows}</tbody></table>` : ''}
+
+                <div class="summary-section">
+                    <h2 style="border:none; margin-top:0;">${t.finalSummaryTitle}</h2>
+                    <p><b>${t.totalHira}:</b> ${totalHira}</p>
+                    <p><b>${t.totalAmount}:</b> ${currencySymbol}${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                    <p><b>${t.totalUpad}:</b> ${currencySymbol}${totalUpad.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                    <hr style="margin: 10px 0;">
+                    <p style="font-size: 1.2em;"><b>${t.netAmount}:</b> ${currencySymbol}${netAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                </div>
+                
+                <div class="pdf-footer">${timestamp}</div>
+            </div>`;
+            
+            try {
+                const canvas = await html2canvas(pdfContentEl, { scale: 2, useCORS: true });
+                const imgData = canvas.toDataURL('image/png'); const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+                const pdfWidth = pdf.internal.pageSize.getWidth(), pdfHeight = pdf.internal.pageSize.getHeight();
+                const canvasRatio = canvas.width / canvas.height;
+                const imgWidth = pdfWidth - 20; // with margin
+                const imgHeight = imgWidth / canvasRatio;
+                let heightLeft = imgHeight, position = 10; // with margin
+                
+                pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight); heightLeft -= (pdfHeight - 20);
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight; pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight); heightLeft -= (pdfHeight - 20);
+                }
+                pdf.save(`Hira-Hisab-${monthName}-${year}.pdf`);
+            } catch (error) { console.error("Error creating PDF:", error); alert("Sorry, there was an error creating the PDF.");
+            } finally { dom.pdfBtn.textContent = originalButtonText; dom.pdfBtn.disabled = false; pdfContentEl.innerHTML = ''; }
+        }
+
+        function handleRestore(event) {
+            const file = event.target.files[0]; if (!file || !userId) return; dom.restoreBtn.disabled = true;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+                    if (!Array.isArray(backupData)) throw new Error('Invalid backup file format.');
+                    for (const dayData of backupData) {
+                        if (dayData.date) {
+                             const docRef = doc(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`, dayData.date);
+                             await setDoc(docRef, dayData, { merge: true });
+                        }
+                    }
+                    alert("Restore complete!"); fetchAndRender();
+                } catch (error) { console.error("Error restoring backup:", error); alert(`Restore failed: ${error.message}`);
+                } finally { dom.restoreBtn.disabled = false; dom.backupFileInput.value = ''; }
+            };
+            reader.readAsText(file);
+        }
+
+    </script>
+</body>
+</html>
+
