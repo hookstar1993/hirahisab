@@ -12,8 +12,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- Google API & Identity Services -->
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js?onload=gapiLoaded" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer onload="gsiLoaded()"></script>
 
     <style>
         :root {
@@ -535,8 +535,6 @@
                             dom.driveBackupBtn.onclick = handleDriveBackup;
                             dom.driveSyncBtn.onclick = () => handleDriveSync(false);
 
-                            await gapiLoaded();
-                            await initGapiClient();
                             await handleDriveSync(true); 
                         } else {
                             dom.userDisplay.classList.add('hidden');
@@ -942,18 +940,20 @@
             gapi.load('client', initGapiClient);
         }
 
+        function gsiLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/drive.appdata',
+                callback: '', // Will be set dynamically
+            });
+        }
+
         async function initGapiClient() {
             await gapi.client.init({
                 apiKey: GOOGLE_API_KEY,
                 discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
             });
             gapiInitted = true;
-            
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: GOOGLE_CLIENT_ID,
-                scope: 'https://www.googleapis.com/auth/drive.appdata',
-                callback: '', // Will be set dynamically
-            });
         }
         
         async function getDriveFileId() {
@@ -980,7 +980,6 @@
 
         function driveActionWrapper(actionFunction) {
             if (!gapiInitted || !tokenClient) {
-                alert("Google API is not ready yet. Please wait a moment and try again.");
                 return;
             }
 
