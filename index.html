@@ -11,6 +11,8 @@
     <!-- PDF Generation Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Google API Client -->
+    <script src="https://apis.google.com/js/api.js" async defer></script>
 
     <style>
         :root {
@@ -224,14 +226,35 @@
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 transition-colors duration-300">
 
-    <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 relative">
+    <div id="login-modal" class="fixed inset-0 bg-slate-100 dark:bg-slate-900 flex items-center justify-center p-4 z-50">
+        <div class="themed-card p-8 w-full max-w-sm text-center">
+            <h2 class="text-3xl font-bold font-headline" data-lang-key="main_title">Hira Hisab Diary</h2>
+            <p class="opacity-70 mt-2 mb-8" data-lang-key="login_subtitle">Sign in to continue</p>
+            <div class="flex flex-col gap-4">
+                <button id="google-login-btn" class="w-full flex items-center justify-center gap-3 px-6 py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 transition-colors">
+                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="m6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.011 35.391 44 30.138 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+                    <span data-lang-key="login_google_btn">Sign in with Google</span>
+                </button>
+                <button id="guest-login-btn" class="w-full px-6 py-3 rounded-xl font-semibold text-slate-700 dark:text-slate-300 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors" data-lang-key="login_guest_btn">Continue as Guest</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 relative hidden">
         <div class="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-3 z-10">
+            <div id="user-display" class="hidden sm:flex items-center gap-2 text-sm">
+                <img id="user-photo" class="w-8 h-8 rounded-full" src="">
+                <span id="user-name" class="font-semibold text-slate-700 dark:text-slate-300"></span>
+            </div>
             <button id="lang-switcher-btn" class="px-3 py-2 text-sm rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-md ring-1 ring-slate-900/10 dark:ring-white/10 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors flex items-center">
                 <span class="lang-en">EN</span><span class="lang-separator">/</span><span class="lang-gu">ગુજરાતી</span>
             </button>
             <button id="theme-toggle-btn" class="h-10 w-10 flex items-center justify-center rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-md ring-1 ring-slate-900/10 dark:ring-white/10 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors">
                 <svg id="theme-icon-sun" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                 <svg id="theme-icon-moon" class="h-6 w-6 text-indigo-400 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            </button>
+             <button id="logout-btn" class="h-10 w-10 flex items-center justify-center rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-md ring-1 ring-slate-900/10 dark:ring-white/10 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors">
+                <svg class="w-6 h-6 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>
             </button>
         </div>
         
@@ -279,15 +302,16 @@
                     </div>
                 </div>
                  <div class="themed-card p-6 flex flex-col gap-4">
-                    <button id="pdf-btn" class="button w-full">
+                     <div id="drive-sync-status" class="text-xs text-center text-slate-500 dark:text-slate-400"></div>
+                     <button id="drive-backup-btn" class="w-full px-4 py-3 rounded-xl font-semibold text-sm text-white bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 transition-all transform hover:scale-105" data-lang-key="backup_drive_btn"></button>
+                     <button id="drive-sync-btn" class="w-full px-4 py-3 rounded-xl font-semibold text-sm text-white bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 transition-all transform hover:scale-105" data-lang-key="sync_drive_btn"></button>
+                     <hr class="border-t border-dashed border-[var(--border-light)] dark:border-[var(--border-dark)] my-1">
+                     <button id="pdf-btn" class="button w-full">
                         <span class="button_lg">
                             <span class="button_sl"></span>
                             <span class="button_text" data-lang-key="export_pdf_btn"></span>
                         </span>
                     </button>
-                    <button id="backup-btn" class="w-full px-4 py-3 rounded-xl font-semibold text-sm text-white bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 transition-all transform hover:scale-105" data-lang-key="backup_btn"></button>
-                    <button id="restore-btn" class="w-full px-4 py-3 rounded-xl font-semibold text-sm text-white bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 transition-all transform hover:scale-105" data-lang-key="restore_btn"></button>
-                    <input type="file" id="backup-file-input" class="hidden" accept=".json">
                 </div>
             </div>
         </main>
@@ -361,33 +385,51 @@
         </div>
     </div>
 
+    <div id="sync-confirm-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="themed-card p-8 w-full max-w-sm text-center relative">
+            <h3 class="text-xl font-bold mb-2 font-headline" data-lang-key="sync_confirm_title"></h3>
+            <p class="opacity-70 mb-6" data-lang-key="sync_confirm_subtitle"></p>
+            <div class="flex gap-3">
+                <button id="cancel-sync-btn" class="w-full px-6 py-3 rounded-xl font-semibold text-slate-700 dark:text-slate-300 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600" data-lang-key="cancel_btn">Cancel</button>
+                <button id="confirm-sync-btn" class="w-full px-6 py-3 rounded-xl font-semibold text-white bg-red-600 hover:bg-red-700">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+
     <div id="pdf-content-wrapper" class="absolute -left-[9999px] top-auto w-auto h-auto overflow-hidden"></div>
 
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, query, where, getDocs, setDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, getRedirectResult, signInWithRedirect } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, onSnapshot, query, where, getDocs, setDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // Environment se config lene ki koshish karein, nahi to hardcoded config use karein
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-            ? JSON.parse(__firebase_config) 
-            : {
-                apiKey: "AIzaSyCUd4LsorImJIYxD8CqiXJ-y423vuJyku8",
-                authDomain: "hookstar1993.github.io",
-                projectId: "hira-hisab-app",
-                storageBucket: "hira-hisab-app.firebasestorage.app",
-                messagingSenderId: "814214532826",
-                appId: "1:814214532826:web:2c001e977c95655e8e5fe3",
-                measurementId: "G-07QF7KYF2T"
-            };
+        // ZAROORI: Google Cloud Console se apna API Key aur Client ID yahan daalein
+        const GOOGLE_API_KEY = "AIzaSyDyXvmlsAUxCRUsIiJs7n88oyfVT-enG4s";
+        const GOOGLE_CLIENT_ID = "975854201663-cm1s1bjs1e8giegd4tr4gt3o5vioh1p6.apps.googleusercontent.com";
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : undefined;
+        const firebaseConfig = {
+            apiKey: "AIzaSyCUd4LsorImJIYxD8CqiXJ-y423vuJyku8",
+            authDomain: "https://hookstar1993.github.io",
+            projectId: "hira-hisab-app",
+            storageBucket: "hira-hisab-app.firebasestorage.app",
+            messagingSenderId: "814214532826",
+            appId: "1:814214532826:web:2c001e977c95655e8e5fe3",
+            measurementId: "G-07QF7KYF2T"
+        };
+        
+        const appId = firebaseConfig.projectId;
+        const BACKUP_FILE_NAME = 'hira-hisab-backup.json';
+        let gapiInitted = false;
+        let gisInitted = false;
+        let tokenClient;
+        let driveFileId = null;
+
 
         const translations = {
-            en: { main_title: "Hira Hisab Diary", main_subtitle: "Your Personal Diamond Calculation Diary", month_label: "Select Month & Year", monthly_summary_title: "Monthly Summary", total_hira_label: "Total Hira", total_amount_label: "Total Amount", total_upad_label: "Total Upad", net_amount_label: "Net Amount", backup_btn: "Download Backup", restore_btn: "Restore from Backup", export_pdf_btn: "Export Month as PDF", entries_for_label: "Entries for ", hira_entries_label: "Hira Hisab", add_entry_label: "Add New Hira Entry", quantity_placeholder: "Diamonds (Qty)", rate_placeholder: "Rate per Diamond", save_entry_btn: "Save Hira", upad_entries_label: "Upad Hisab", add_upad_label: "Add New Upad Entry", amount_placeholder: "Amount", note_placeholder_optional: "Note (Optional)", save_upad_btn: "Save Upad", pdf_modal_title: "Select PDF Language", pdf_modal_subtitle: "Choose the language for your report.", choice_modal_title: "Select Entry Type", choice_modal_subtitle: "What would you like to add for", add_hira_choice_btn: "Add Hira / View Entries", add_upad_choice_btn: "Add Upad / View Entries", hira_unit: "Hira", upad_unit: "Upad", currency_symbol: "₹", months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], pdf: { title: "Hira Hisab Report", hiraTitle: "Hira Work Details", upadTitle: "Upad (Advance) Details", finalSummaryTitle: "Final Summary", totalHira: "Total Hira", totalAmount: "Total Amount", totalUpad: "Total Upad", netAmount: "Net Payable Amount", date: "Date", qty: "Diamonds (Qty)", rate: "Rate", total: "Total Amount", note: "Note", amount: "Amount", generatedOn: "Generated on" } },
-            gu: { main_title: "હીરા હિસાબ ડાયરી", main_subtitle: "તમારો અંગત હીરા હિસાબ", month_label: "મહિનો અને વર્ષ પસંદ કરો", monthly_summary_title: "માસિક સારાંશ", total_hira_label: "કુલ હીરા", total_amount_label: "કુલ રકમ", total_upad_label: "કુલ ઉપાડ", net_amount_label: "ચોખ્ખી રકમ", backup_btn: "બેકઅપ ડાઉનલોડ કરો", restore_btn: "બેકઅપ પુનઃસ્થાપિત કરો", export_pdf_btn: "મહિનાનો PDF નિકાસ કરો", entries_for_label: "માટેની એન્ટ્રીઓ ", hira_entries_label: "હીરા હિસાબ", add_entry_label: "નવી હીરા એન્ટ્રી ઉમેરો", quantity_placeholder: "હીરા (નંગ)", rate_placeholder: "હીરા દીઠ ભાવ", save_entry_btn: "હીરા સાચવો", upad_entries_label: "ઉપાડ હિસાબ", add_upad_label: "નવો ઉપાડ ઉમેરો", amount_placeholder: "રકમ", note_placeholder_optional: "નોંધ (વૈકલ્પિક)", save_upad_btn: "ઉપાડ સાચવો", pdf_modal_title: "PDF ભાષા પસંદ કરો", pdf_modal_subtitle: "તમારા રિપોર્ટ માટે ભાષા પસંદ કરો.", choice_modal_title: "એન્ટ્રીનો પ્રકાર પસંદ કરો", choice_modal_subtitle: "માટે તમે શું ઉમેરવા માંગો છો", add_hira_choice_btn: "હીરા ઉમેરો / એન્ટ્રી જુઓ", add_upad_choice_btn: "ઉપાડ ઉમેરો / એન્ટ્રી જુઓ", hira_unit: "હીરા", upad_unit: "ઉપાડ", currency_symbol: "₹", months: ["જાન્યુઆરી", "ફેબ્રુઆરી", "માર્ચ", "એપ્રિલ", "મે", "જૂન", "જુલાઈ", "ઑગસ્ટ", "સપ્ટેમ્બર", "ઑક્ટોબર", "નવેમ્બર", "ડિસેમ્બર"], weekdays: ["સોમ", "મંગળ", "બુધ", "ગુરુ", "શુક્ર", "શનિ", "રવિ"], pdf: { title: "હીરા હિસાબ રિપોર્ટ", hiraTitle: "હીરા કામની વિગતો", upadTitle: "ઉપાડ (એડવાન્સ) ની વિગતો", finalSummaryTitle: "અંતિમ સારાંશ", totalHira: "કુલ હીરા", totalAmount: "કુલ રકમ", totalUpad: "કુલ ઉપાડ", netAmount: "ચોખ્ખી ચૂકવવાપાત્ર રકમ", date: "તારીખ", qty: "હીરા (નંગ)", rate: "ભાવ", total: "કુલ રકમ", note: "નોંધ", amount: "રકમ", generatedOn: "ના રોજ જનમરેટ થયેલ" } }
+            en: { main_title: "Hira Hisab Diary", main_subtitle: "Your Personal Diamond Calculation Diary", month_label: "Select Month & Year", monthly_summary_title: "Monthly Summary", total_hira_label: "Total Hira", total_amount_label: "Total Amount", total_upad_label: "Total Upad", net_amount_label: "Net Amount", backup_drive_btn: "Backup to Google Drive", sync_drive_btn: "Sync from Google Drive", export_pdf_btn: "Export Month as PDF", entries_for_label: "Entries for ", hira_entries_label: "Hira Hisab", add_entry_label: "Add New Hira Entry", quantity_placeholder: "Diamonds (Qty)", rate_placeholder: "Rate per Diamond", save_entry_btn: "Save Hira", upad_entries_label: "Upad Hisab", add_upad_label: "Add New Upad Entry", amount_placeholder: "Amount", note_placeholder_optional: "Note (Optional)", save_upad_btn: "Save Upad", pdf_modal_title: "Select PDF Language", pdf_modal_subtitle: "Choose the language for your report.", choice_modal_title: "Select Entry Type", choice_modal_subtitle: "What would you like to add for", add_hira_choice_btn: "Add Hira / View Entries", add_upad_choice_btn: "Add Upad / View Entries", hira_unit: "Hira", upad_unit: "Upad", currency_symbol: "₹", login_subtitle: "Sign in to continue", login_google_btn: "Sign in with Google", login_guest_btn: "Continue as Guest", sync_confirm_title: "Confirm Sync", sync_confirm_subtitle: "This will replace your current data with the data from Google Drive. Are you sure?", cancel_btn: "Cancel", months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], pdf: { title: "Hira Hisab Report", hiraTitle: "Hira Work Details", upadTitle: "Upad (Advance) Details", finalSummaryTitle: "Final Summary", totalHira: "Total Hira", totalAmount: "Total Amount", totalUpad: "Total Upad", netAmount: "Net Payable Amount", date: "Date", qty: "Diamonds (Qty)", rate: "Rate", total: "Total Amount", note: "Note", amount: "Amount", generatedOn: "Generated on" } },
+            gu: { main_title: "હીરા હિસાબ ડાયરી", main_subtitle: "તમારો અંગત હીરા હિસાબ", month_label: "મહિનો અને વર્ષ પસંદ કરો", monthly_summary_title: "માસિક સારાંશ", total_hira_label: "કુલ હીરા", total_amount_label: "કુલ રકમ", total_upad_label: "કુલ ઉપાડ", net_amount_label: "ચોખ્ખી રકમ", backup_drive_btn: "Google Drive માં બેકઅપ લો", sync_drive_btn: "Google Drive થી સિંક કરો", export_pdf_btn: "મહિનાનો PDF નિકાસ કરો", entries_for_label: "માટેની એન્ટ્રીઓ ", hira_entries_label: "હીરા હિસાબ", add_entry_label: "નવી હીરા એન્ટ્રી ઉમેરો", quantity_placeholder: "હીરા (નંગ)", rate_placeholder: "હીરા દીઠ ભાવ", save_entry_btn: "હીરા સાચવો", upad_entries_label: "ઉપાડ હિસાબ", add_upad_label: "નવો ઉપાડ ઉમેરો", amount_placeholder: "રકમ", note_placeholder_optional: "નોંધ (વૈકલ્પિક)", save_upad_btn: "ઉપાડ સાચવો", pdf_modal_title: "PDF ભાષા પસંદ કરો", pdf_modal_subtitle: "તમારા રિપોર્ટ માટે ભાષા પસંદ કરો.", choice_modal_title: "એન્ટ્રીનો પ્રકાર પસંદ કરો", choice_modal_subtitle: "માટે તમે શું ઉમેરવા માંગો છો", add_hira_choice_btn: "હીરા ઉમેરો / એન્ટ્રી જુઓ", add_upad_choice_btn: "ઉપાડ ઉમેરો / એન્ટ્રી જુઓ", hira_unit: "હીરા", upad_unit: "ઉપાડ", currency_symbol: "₹", login_subtitle: "ચાલુ રાખવા માટે સાઇન ઇન કરો", login_google_btn: "Google વડે સાઇન ઇન કરો", login_guest_btn: "મહેમાન તરીકે ચાલુ રાખો", sync_confirm_title: "સિંકની પુષ્ટિ કરો", sync_confirm_subtitle: "આ તમારા વર્તમાન ડેટાને Google Drive ના ડેટાથી બદલી દેશે. શું તમે ચોક્કસ છો?", cancel_btn: "રદ કરો", months: ["જાન્યુઆરી", "ફેબ્રુઆરી", "માર્ચ", "એપ્રિલ", "મે", "જૂન", "જુલાઈ", "ઑગસ્ટ", "સપ્ટેમ્બર", "ઑક્ટોબર", "નવેમ્બર", "ડિસેમ્બર"], weekdays: ["સોમ", "મંગળ", "બુધ", "ગુરુ", "શુક્ર", "શનિ", "રવિ"], pdf: { title: "હીરા હિસાબ રિપોર્ટ", hiraTitle: "હીરા કામની વિગતો", upadTitle: "ઉપાડ (એડવાન્સ) ની વિગતો", finalSummaryTitle: "અંતિમ સારાંશ", totalHira: "કુલ હીરા", totalAmount: "કુલ રકમ", totalUpad: "કુલ ઉપાડ", netAmount: "ચોખ્ખી ચૂકવવાપાત્ર રકમ", date: "તારીખ", qty: "હીરા (નંગ)", rate: "ભાવ", total: "કુલ રકમ", note: "નોંધ", amount: "રકમ", generatedOn: "ના રોજ જનરેટ થયેલ" } }
         };
         let currentLang = 'en', db, auth, userId, currentYear, currentMonth, unsubscribe, selectedDate;
         let currentDayData = { date: null, entries: [], upadEntries: [] }, entriesMap = new Map();
@@ -396,8 +438,8 @@
             loader: document.getElementById('loader'), mainContent: document.getElementById('main-content'), monthSelect: document.getElementById('month-select'),
             yearSelect: document.getElementById('year-select'), calendarGrid: document.getElementById('calendar-grid'), totalHiraEl: document.getElementById('total-hira'),
             totalAmountEl: document.getElementById('total-amount'), totalUpadEl: document.getElementById('total-upad'), netAmountEl: document.getElementById('net-amount'),
-            backupBtn: document.getElementById('backup-btn'), pdfBtn: document.getElementById('pdf-btn'), restoreBtn: document.getElementById('restore-btn'), 
-            backupFileInput: document.getElementById('backup-file-input'), dayDetailsModal: document.getElementById('day-details-modal'),
+            pdfBtn: document.getElementById('pdf-btn'), 
+            dayDetailsModal: document.getElementById('day-details-modal'),
             modalDateEl: document.getElementById('modal-date'), closeDayModalBtn: document.getElementById('close-day-modal-btn'), diamondListEl: document.getElementById('diamond-list'),
             dayTotalEl: document.getElementById('day-total'), addDiamondForm: document.getElementById('add-diamond-form'), quantityInput: document.getElementById('quantity'),
             rateInput: document.getElementById('rate'), pdfLangModal: document.getElementById('pdf-lang-modal'), exportEnglishBtn: document.getElementById('export-english-btn'),
@@ -411,10 +453,23 @@
             addUpadChoiceBtn: document.getElementById('add-upad-choice-btn'),
             hiraTabBtn: document.getElementById('hira-tab-btn'), upadTabBtn: document.getElementById('upad-tab-btn'),
             hiraSection: document.getElementById('hira-section'), upadSection: document.getElementById('upad-section'),
+            loginModal: document.getElementById('login-modal'), appContainer: document.getElementById('app-container'),
+            googleLoginBtn: document.getElementById('google-login-btn'), guestLoginBtn: document.getElementById('guest-login-btn'),
+            logoutBtn: document.getElementById('logout-btn'), userDisplay: document.getElementById('user-display'),
+            userName: document.getElementById('user-name'), userPhoto: document.getElementById('user-photo'),
+            driveBackupBtn: document.getElementById('drive-backup-btn'), driveSyncBtn: document.getElementById('drive-sync-btn'),
+            driveSyncStatus: document.getElementById('drive-sync-status'),
+            syncConfirmModal: document.getElementById('sync-confirm-modal'),
+            cancelSyncBtn: document.getElementById('cancel-sync-btn'),
+            confirmSyncBtn: document.getElementById('confirm-sync-btn')
         };
         
         document.addEventListener('DOMContentLoaded', () => {
-            setupEventListeners(); setupTheme(); setupLanguage(); initializeAppAndAuth();
+            setupEventListeners(); 
+            setupTheme(); 
+            setupLanguage(); 
+            initializeAppAndAuth();
+            gapiLoaded();
         });
 
         function setupTheme() {
@@ -460,30 +515,46 @@
 
         async function initializeAppAndAuth() {
             try {
-                if (firebaseConfig.apiKey.startsWith("AIza") === false && typeof __firebase_config === 'undefined') {
-                    dom.loader.innerHTML = `<p class="text-red-500 text-center p-4">Firebase is not configured. Please add your Firebase project configuration in index.html</p>`;
-                    return;
-                }
                 const app = initializeApp(firebaseConfig);
-                db = getFirestore(app); auth = getAuth(app);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
-                        userId = user.uid; dom.loader.style.display = 'none'; dom.mainContent.classList.remove('hidden');
-                        initializeDateTime(); fetchAndRender();
-                    } else {
-                        if (initialAuthToken) {
-                            try {
-                                await signInWithCustomToken(auth, initialAuthToken);
-                            } catch (error) {
-                                console.error("Error with custom token, signing in anonymously:", error);
-                                await signInAnonymously(auth);
-                            }
+                        userId = user.uid;
+                        dom.loginModal.classList.add('hidden');
+                        dom.appContainer.classList.remove('hidden');
+                        
+                        if (!user.isAnonymous) {
+                            dom.userDisplay.classList.remove('hidden');
+                            dom.userName.textContent = user.displayName;
+                            dom.userPhoto.src = user.photoURL;
+                            dom.driveBackupBtn.disabled = false;
+                            dom.driveSyncBtn.disabled = false;
+                             await initGapiClient();
+                             await handleDriveSync(true); // Automatic initial sync
                         } else {
-                            await signInAnonymously(auth);
+                            dom.userDisplay.classList.add('hidden');
+                            dom.driveBackupBtn.disabled = true;
+                            dom.driveSyncBtn.disabled = true;
                         }
+
+                        initializeDateTime();
+                        fetchAndRender();
+                    } else {
+                        userId = null;
+                        if(unsubscribe) unsubscribe();
+                        dom.loginModal.classList.remove('hidden');
+                        dom.appContainer.classList.add('hidden');
+                        dom.mainContent.classList.add('hidden');
+                        dom.loader.style.display = 'flex';
                     }
                 });
-            } catch (error) { console.error("Firebase Init Error:", error); dom.loader.innerHTML = `<p class="text-red-500">${error.message}</p>`; }
+
+            } catch (error) {
+                console.error("Firebase Init Error:", error);
+                dom.loginModal.innerHTML = `<p class="text-red-500 p-8">${error.message}</p>`;
+            }
         }
 
         function initializeDateTime() {
@@ -491,8 +562,10 @@
             if (!currentYear) currentYear = today.getFullYear();
             if (currentMonth === undefined) currentMonth = today.getMonth();
             const monthNames = translations[currentLang].months;
-            dom.monthSelect.innerHTML = ''; monthNames.forEach((month, index) => dom.monthSelect.appendChild(new Option(month, index)));
-            dom.monthSelect.value = currentMonth; dom.yearSelect.value = currentYear;
+            dom.monthSelect.innerHTML = '';
+            monthNames.forEach((month, index) => dom.monthSelect.appendChild(new Option(month, index)));
+            dom.monthSelect.value = currentMonth;
+            dom.yearSelect.value = currentYear;
         }
 
         function setupEventListeners() {
@@ -502,15 +575,20 @@
                 dom.themeIconSun.classList.toggle('hidden', isDark); dom.themeIconMoon.classList.toggle('hidden', !isDark);
             });
             dom.langSwitcherBtn.addEventListener('click', () => { switchLanguage(currentLang === 'en' ? 'gu' : 'en'); });
-            dom.monthSelect.addEventListener('change', handleDateChange); dom.yearSelect.addEventListener('change', handleDateChange);
-            dom.calendarGrid.addEventListener('click', handleCalendarClick); dom.addDiamondForm.addEventListener('submit', handleAddEntry);
+            dom.monthSelect.addEventListener('change', handleDateChange);
+            dom.yearSelect.addEventListener('change', handleDateChange);
+            dom.calendarGrid.addEventListener('click', handleCalendarClick);
+            dom.addDiamondForm.addEventListener('submit', handleAddEntry);
             dom.addUpadForm.addEventListener('submit', handleAddUpad);
             dom.closeDayModalBtn.addEventListener('click', () => dom.dayDetailsModal.classList.add('hidden'));
-            dom.diamondListEl.addEventListener('click', handleDeleteEntry); dom.upadListEl.addEventListener('click', handleDeleteUpad);
-            dom.backupBtn.addEventListener('click', handleBackup);
-            dom.pdfBtn.addEventListener('click', showLanguageModal); dom.restoreBtn.addEventListener('click', () => dom.backupFileInput.click());
-            dom.backupFileInput.addEventListener('change', handleRestore); dom.exportEnglishBtn.addEventListener('click', () => generatePdfWithLanguage('en'));
-            dom.exportGujaratiBtn.addEventListener('click', () => generatePdfWithLanguage('gu')); dom.closeLangModalBtn.addEventListener('click', () => dom.pdfLangModal.classList.add('hidden'));
+            dom.diamondListEl.addEventListener('click', handleDeleteEntry);
+            dom.upadListEl.addEventListener('click', handleDeleteUpad);
+            
+            dom.pdfBtn.addEventListener('click', showLanguageModal);
+            
+            dom.exportEnglishBtn.addEventListener('click', () => generatePdfWithLanguage('en'));
+            dom.exportGujaratiBtn.addEventListener('click', () => generatePdfWithLanguage('gu'));
+            dom.closeLangModalBtn.addEventListener('click', () => dom.pdfLangModal.classList.add('hidden'));
             dom.closeChoiceModalBtn.addEventListener('click', () => dom.entryChoiceModal.classList.add('hidden'));
             dom.addHiraChoiceBtn.addEventListener('click', () => {
                 dom.entryChoiceModal.classList.add('hidden');
@@ -522,10 +600,39 @@
             });
             dom.hiraTabBtn.addEventListener('click', () => switchTab('hira'));
             dom.upadTabBtn.addEventListener('click', () => switchTab('upad'));
+            dom.googleLoginBtn.addEventListener('click', handleGoogleLogin);
+            dom.guestLoginBtn.addEventListener('click', handleGuestLogin);
+            dom.logoutBtn.addEventListener('click', handleLogout);
+            dom.driveBackupBtn.addEventListener('click', handleDriveBackup);
+            dom.driveSyncBtn.addEventListener('click', () => handleDriveSync(false));
+            dom.cancelSyncBtn.addEventListener('click', () => dom.syncConfirmModal.classList.add('hidden'));
+        }
+
+        async function handleGoogleLogin() {
+            const provider = new GoogleAuthProvider();
+            provider.addScope('https://www.googleapis.com/auth/drive.file');
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Google Sign-In Error:", error);
+            }
+        }
+
+        function handleGuestLogin() {
+            signInAnonymously(auth).catch(error => console.error("Guest Sign-In Error:", error));
+        }
+
+        function handleLogout() {
+            signOut(auth).catch(error => console.error("Sign Out Error:", error));
         }
         
         function fetchAndRender() {
-            if (!userId) return; if (unsubscribe) unsubscribe();
+            if (!userId) return;
+            if (unsubscribe) unsubscribe();
+            
+            dom.mainContent.classList.remove('hidden');
+            dom.loader.style.display = 'none';
+
             const startDate = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
             const endDate = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
             const entriesCollection = collection(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`);
@@ -727,24 +834,10 @@
             dom.entryChoiceModal.classList.add('flex');
         }
         
-        async function handleBackup() {
-            if (!userId) return; dom.backupBtn.disabled = true;
-            try {
-                const entriesCollection = collection(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`);
-                const querySnapshot = await getDocs(entriesCollection); const backupData = [];
-                querySnapshot.forEach((doc) => backupData.push(doc.data()));
-                if (backupData.length === 0) { alert("No data to back up."); return; }
-                const jsonString = JSON.stringify(backupData, null, 2); const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob); const a = document.createElement('a');
-                a.href = url; a.download = `hira-hisab-backup-${new Date().toISOString().split('T')[0]}.json`;
-                a.click(); URL.revokeObjectURL(url);
-            } catch (error) { console.error("Error creating backup:", error); }
-            finally { dom.backupBtn.disabled = false; }
-        }
-
         function showLanguageModal() {
             if (entriesMap.size === 0) { alert("No data to export."); return; }
-            dom.pdfLangModal.classList.remove('hidden'); dom.pdfLangModal.classList.add('flex');
+            dom.pdfLangModal.classList.remove('hidden');
+            dom.pdfLangModal.classList.add('flex');
         }
 
         async function generatePdfWithLanguage(lang) {
@@ -824,24 +917,150 @@
             } finally { dom.pdfBtn.textContent = originalButtonText; dom.pdfBtn.disabled = false; pdfContentEl.innerHTML = ''; }
         }
 
-        function handleRestore(event) {
-            const file = event.target.files[0]; if (!file || !userId) return; dom.restoreBtn.disabled = true;
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const backupData = JSON.parse(e.target.result);
-                    if (!Array.isArray(backupData)) throw new Error('Invalid backup file format.');
-                    for (const dayData of backupData) {
-                        if (dayData.date) {
-                             const docRef = doc(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`, dayData.date);
-                             await setDoc(docRef, dayData, { merge: true });
-                        }
-                    }
-                    alert("Restore complete!"); fetchAndRender();
-                } catch (error) { console.error("Error restoring backup:", error); alert(`Restore failed: ${error.message}`);
-                } finally { dom.restoreBtn.disabled = false; dom.backupFileInput.value = ''; }
+        // --- Google Drive Functions ---
+        
+        function gapiLoaded() {
+            if (GOOGLE_API_KEY.startsWith("PASTE_YOUR")) {
+                 console.warn("Google API Key is not set. Drive features will be disabled.");
+                 return;
+            }
+            gapi.load('client', () => {
+                gapi.client.init({
+                    apiKey: GOOGLE_API_KEY,
+                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                }).then(() => gapiInitted = true);
+            });
+        }
+
+        async function initGapiClient() {
+             if (auth.currentUser && !auth.currentUser.isAnonymous) {
+                const credential = GoogleAuthProvider.credentialFromResult({user: auth.currentUser});
+                const oauthToken = credential.accessToken;
+                gapi.client.setToken({ access_token: oauthToken });
+            }
+        }
+
+        async function getDriveFileId() {
+            if (driveFileId) return driveFileId;
+            try {
+                const response = await gapi.client.drive.files.list({
+                    q: `name='${BACKUP_FILE_NAME}'`,
+                    spaces: 'appDataFolder',
+                    fields: 'files(id, name, modifiedTime)',
+                });
+                if (response.result.files && response.result.files.length > 0) {
+                    driveFileId = response.result.files[0].id;
+                    const modifiedTime = new Date(response.result.files[0].modifiedTime);
+                    dom.driveSyncStatus.textContent = `Last backup: ${modifiedTime.toLocaleString()}`;
+                    return driveFileId;
+                }
+                dom.driveSyncStatus.textContent = 'No backup found in Google Drive.';
+                return null;
+            } catch (err) {
+                console.error("Error finding Drive file:", err);
+                return null;
+            }
+        }
+        
+        async function handleDriveBackup() {
+            if (!gapiInitted || auth.currentUser.isAnonymous) return alert('Please log in with Google to use this feature.');
+            dom.driveBackupBtn.disabled = true;
+            dom.driveBackupBtn.textContent = 'Backing up...';
+
+            const entriesCollection = collection(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`);
+            const querySnapshot = await getDocs(entriesCollection);
+            const backupData = [];
+            querySnapshot.forEach((doc) => backupData.push(doc.data()));
+
+            const fileContent = JSON.stringify(backupData, null, 2);
+            const file = new Blob([fileContent], { type: 'application/json' });
+            
+            const metadata = {
+                'name': BACKUP_FILE_NAME,
+                'mimeType': 'application/json',
             };
-            reader.readAsText(file);
+            
+            const fileId = await getDriveFileId();
+            const form = new FormData();
+            const token = gapi.client.getToken().access_token;
+
+            if (fileId) { // Update existing file
+                 form.append('metadata', new Blob([JSON.stringify({})], { type: 'application/json' }));
+                 form.append('file', file);
+                 
+                 await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, {
+                     method: 'PATCH',
+                     headers: new Headers({ 'Authorization': 'Bearer ' + token }),
+                     body: form
+                 });
+
+            } else { // Create new file
+                 metadata.parents = ['appDataFolder'];
+                 form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                 form.append('file', file);
+
+                 const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`, {
+                     method: 'POST',
+                     headers: new Headers({ 'Authorization': 'Bearer ' + token }),
+                     body: form
+                 });
+                 const newFile = await res.json();
+                 driveFileId = newFile.id;
+            }
+
+            dom.driveBackupBtn.disabled = false;
+            updateUIText(); // To restore button text
+            await getDriveFileId(); // To refresh status
+        }
+        
+        async function handleDriveSync(isInitial = false) {
+             if (!gapiInitted || auth.currentUser.isAnonymous) return;
+             
+             const fileId = await getDriveFileId();
+             if (!fileId) {
+                if(!isInitial) alert("No backup file found in your Google Drive.");
+                return;
+             }
+
+             const response = await gapi.client.drive.files.get({
+                fileId: fileId,
+                alt: 'media'
+             });
+
+             const backupData = response.result;
+             
+             if (!isInitial) {
+                dom.syncConfirmModal.classList.remove('hidden');
+                dom.syncConfirmModal.classList.add('flex');
+                dom.confirmSyncBtn.onclick = () => {
+                    performSync(backupData);
+                    dom.syncConfirmModal.classList.add('hidden');
+                };
+             } else {
+                 const localDataSnapshot = await getDocs(collection(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`));
+                 if (localDataSnapshot.empty) {
+                     console.log("Local data is empty, syncing from Drive automatically.");
+                     performSync(backupData);
+                 }
+             }
+        }
+        
+        async function performSync(backupData) {
+            if (!Array.isArray(backupData)) {
+                alert("Invalid backup file format.");
+                return;
+            }
+            
+            const batch = writeBatch(db);
+            for (const dayData of backupData) {
+                if (dayData.date) {
+                    const docRef = doc(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`, dayData.date);
+                    batch.set(docRef, dayData, { merge: true });
+                }
+            }
+            await batch.commit();
+            alert("Sync from Google Drive complete!");
+            fetchAndRender();
         }
 
     </script>
