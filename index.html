@@ -252,6 +252,13 @@
     <div id="toast-notification" class="fixed bottom-5 right-5 bg-green-500 text-white px-5 py-3 rounded-lg shadow-lg hidden transition-opacity duration-300 z-[100]">
         <span id="toast-message"></span>
     </div>
+    
+    <!-- Full-screen loader for merging process -->
+    <div id="merge-loader" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-[200] flex-col gap-4">
+        <div class="spinner"></div>
+        <p class="text-white text-lg font-semibold">Merging your data... Please wait.</p>
+    </div>
+
 
     <div id="login-modal" class="fixed inset-0 bg-slate-100 dark:bg-slate-900 flex items-center justify-center p-4 z-50">
         <div class="themed-card p-8 w-full max-w-sm text-center">
@@ -502,6 +509,7 @@
             toastMessage: document.getElementById('toast-message'),
             cookieConsentBanner: document.getElementById('cookie-consent-banner'),
             allowCookiesBtn: document.getElementById('allow-cookies-btn'),
+            mergeLoader: document.getElementById('merge-loader'),
         };
         
         // Expose functions to global scope for script onload attributes
@@ -575,7 +583,6 @@
                         dom.loginModal.classList.add('hidden');
                         dom.appContainer.classList.remove('hidden');
                         
-                        // User ke status ke hisab se UI update karega
                         updateUserDisplay(user);
 
                         initializeDateTime();
@@ -586,7 +593,7 @@
                         dom.loginModal.classList.remove('hidden');
                         dom.appContainer.classList.add('hidden');
                         dom.mainContent.classList.add('hidden');
-                        dom.userMenu.classList.add('hidden'); // Logout hone par menu hide karein
+                        dom.userMenu.classList.add('hidden'); 
                     }
                 });
 
@@ -597,10 +604,9 @@
         }
 
         function updateUserDisplay(user) {
-            dom.userMenu.classList.remove('hidden'); // Menu ko dikhayein
+            dom.userMenu.classList.remove('hidden');
             
             if (user.isAnonymous) {
-                // --- GUEST USER ke liye UI Setup ---
                 const guestNames = ["Rahi", "Kavir", "Aarav", "Vihaan", "Vivaan", "Aditya"];
                 const avatarColors = [{ bg: "F87171", text: "FFFFFF" }, { bg: "60A5FA", text: "FFFFFF" }];
                 const randomName = guestNames[Math.floor(Math.random() * guestNames.length)];
@@ -611,7 +617,6 @@
                 dom.userName.contentEditable = true;
                 dom.userName.title = translations[currentLang].edit_name_tooltip;
 
-                // Guest ke liye Dropdown Menu Content
                 dom.userMenuContent.innerHTML = `
                     <button id="upgrade-account-btn" class="w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                         <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="m6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.011 35.391 44 30.138 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
@@ -626,20 +631,17 @@
                 document.getElementById('upgrade-account-btn').addEventListener('click', handleUpgradeToGoogle);
                 document.getElementById('logout-menu-btn').addEventListener('click', handleLogout);
 
-                // Drive buttons disable karein
                 dom.driveBackupBtn.disabled = true; dom.driveSyncBtn.disabled = true;
                 dom.driveSyncStatus.textContent = translations[currentLang].drive_guest_mode;
                 const guestModeAlert = () => showToast(translations[currentLang].drive_guest_alert, true);
                 dom.driveBackupBtn.onclick = guestModeAlert; dom.driveSyncBtn.onclick = guestModeAlert;
 
             } else {
-                // --- GOOGLE USER ke liye UI Setup ---
                 dom.userName.textContent = user.displayName;
                 dom.userPhoto.src = user.photoURL;
                 dom.userName.contentEditable = false;
                 dom.userName.title = '';
                 
-                // Google user ke liye Dropdown Menu Content
                 dom.userMenuContent.innerHTML = `
                     <div class="px-4 py-2 text-sm text-slate-500 border-b border-slate-200 dark:border-slate-700">
                         <p class="font-bold text-slate-800 dark:text-slate-200">${user.displayName}</p>
@@ -652,16 +654,15 @@
                 `;
                 document.getElementById('logout-menu-btn').addEventListener('click', handleLogout);
                 
-                // Drive buttons enable karein
                 dom.driveBackupBtn.disabled = false; dom.driveSyncBtn.disabled = false;
                 dom.driveBackupBtn.onclick = handleDriveBackup;
                 dom.driveSyncBtn.onclick = () => handleDriveSync(false);
-                handleDriveSync(true); // Initial sync check
+                handleDriveSync(true);
             }
         }
 
         async function handleUpgradeToGoogle() {
-            dom.userMenuContent.classList.add('hidden'); // Menu band karein
+            dom.userMenuContent.classList.add('hidden');
             const provider = new GoogleAuthProvider();
             provider.addScope('https://www.googleapis.com/auth/drive.appdata');
 
@@ -669,68 +670,51 @@
             if (!anonymousUser || !anonymousUser.isAnonymous) return;
 
             try {
-                // Simple case: Guest user links a NEW Google account
                 await linkWithPopup(anonymousUser, provider);
                 showToast('Account successfully linked to Google!', false);
-                // onAuthStateChanged will automatically update the UI
             } catch (error) {
-                console.error("Error linking account:", error);
-
                 if (error.code === 'auth/credential-already-in-use') {
-                    // Complex case: Guest user tries to link an EXISTING Google account
-                    showToast('This Google account already exists. Merging data...', false);
+                    dom.mergeLoader.classList.remove('hidden');
+                    dom.mergeLoader.classList.add('flex');
                     
+                    showToast('Account exists. Merging your guest data...', false);
                     const credential = GoogleAuthProvider.credentialFromError(error);
                     if (!credential) {
                         showToast('Could not retrieve credentials. Please try again.', true);
+                        dom.mergeLoader.classList.add('hidden');
                         return;
                     }
 
                     try {
-                        // 1. Sign in to the existing Google account. This signs out the anonymous user.
-                        const existingUserCredential = await signInWithCredential(auth, credential);
-                        const permanentUser = existingUserCredential.user;
-                        console.log('Signed in as existing user:', permanentUser.uid);
-
-                        // 2. Fetch data from the anonymous user's path
                         const anonymousUid = anonymousUser.uid;
                         const entriesCollectionRef = collection(db, `artifacts/${appId}/users/${anonymousUid}/hiraHisabEntries`);
                         const guestDataSnapshot = await getDocs(entriesCollectionRef);
-                        
-                        if (guestDataSnapshot.empty) {
-                            console.log('Anonymous user had no data to merge.');
-                            showToast('Welcome back!', false);
-                            await anonymousUser.delete(); // Clean up the old anonymous user
-                            return;
+
+                        const existingUserCredential = await signInWithCredential(auth, credential);
+                        const permanentUser = existingUserCredential.user;
+
+                        if (!guestDataSnapshot.empty) {
+                             const batch = writeBatch(db);
+                            guestDataSnapshot.forEach((docSnapshot) => {
+                                const permanentDocRef = doc(db, `artifacts/${appId}/users/${permanentUser.uid}/hiraHisabEntries`, docSnapshot.id);
+                                batch.set(permanentDocRef, docSnapshot.data(), { merge: true }); 
+                            });
+                            await batch.commit();
                         }
-                        console.log(`Found ${guestDataSnapshot.size} documents to merge for anonymous user ${anonymousUid}`);
-
-                        // 3. Merge data into the permanent account
-                        const batch = writeBatch(db);
-                        guestDataSnapshot.forEach((docSnapshot) => {
-                            const docData = docSnapshot.data();
-                            const permanentDocRef = doc(db, `artifacts/${appId}/users/${permanentUser.uid}/hiraHisabEntries`, docSnapshot.id);
-                            batch.set(permanentDocRef, docData, { merge: true }); 
-                        });
-
-                        await batch.commit();
-                        console.log('Batch commit successful. Data merged.');
-
-                        // 4. Delete the old anonymous user
-                        await anonymousUser.delete();
-                        console.log('Anonymous user deleted.');
                         
                         showToast('Guest data successfully merged!', false);
-                        // onAuthStateChanged will refresh UI
 
                     } catch (mergeError) {
                         console.error("Error during data merge process:", mergeError);
                         showToast('Failed to merge data. Please try again.', true);
+                    } finally {
+                        dom.mergeLoader.classList.add('hidden');
                     }
 
                 } else if (error.code === 'auth/popup-closed-by-user') {
                     showToast('Sign-in cancelled.', true);
                 } else {
+                    console.error("Error linking account:", error);
                     showToast(`Error: ${error.message}`, true);
                 }
             }
@@ -781,7 +765,6 @@
             dom.guestLoginBtn.addEventListener('click', handleGuestLogin);
             dom.cancelSyncBtn.addEventListener('click', () => dom.syncConfirmModal.classList.add('hidden'));
 
-            // User Menu Event Listeners
             dom.userMenuTrigger.addEventListener('click', (e) => {
                 e.stopPropagation();
                 dom.userMenuContent.classList.toggle('hidden');
@@ -801,7 +784,6 @@
                         const newSrc = currentSrc.replace(/text=[^&]*/, `text=${newInitial}`);
                         dom.userPhoto.src = newSrc;
                     } else {
-                        // Revert to original if name is empty
                         const oldName = "Guest";
                         dom.userName.textContent = oldName;
                         dom.userPhoto.src = dom.userPhoto.src.replace(/text=[^&]*/, `text=${oldName.charAt(0)}`);
@@ -891,8 +873,8 @@
         function renderCalendar(year, month, currentEntriesMap) {
             dom.calendarGrid.innerHTML = ''; const today = new Date(); today.setHours(0,0,0,0);
             const firstDayOfMonth = new Date(year, month, 1), daysInMonth = new Date(year, month + 1, 0).getDate();
-            const startDayOfWeek = firstDayOfMonth.getDay(); // 0=Sun, 1=Mon, ...
-            const startDayIndex = (startDayOfWeek === 0) ? 6 : startDayOfWeek - 1; // 0=Mon, 1=Tue, ... 6=Sun
+            const startDayOfWeek = firstDayOfMonth.getDay(); 
+            const startDayIndex = (startDayOfWeek === 0) ? 6 : startDayOfWeek - 1; 
 
             const t = translations[currentLang];
             for (let i = 0; i < startDayIndex; i++) { dom.calendarGrid.insertAdjacentHTML('beforeend', '<div class="day-cell disabled rounded-2xl"></div>'); }
@@ -1345,4 +1327,3 @@
     </script>
 </body>
 </html>
-
