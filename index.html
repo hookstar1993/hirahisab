@@ -139,6 +139,18 @@
             background-color: var(--accent-dark); color: #000;
         }
         
+        /* --- FIX for Calendar Hover color --- */
+        .day-cell:not(.disabled):hover .day-number {
+            color: var(--text-light) !important; /* Ensure text is dark on hover */
+        }
+        .dark .day-cell:not(.disabled):hover {
+             background-color: #334155; /* slate-700 */
+        }
+        .dark .day-cell:not(.disabled):hover .day-number {
+            color: var(--text-dark) !important; /* Ensure text is light on hover */
+        }
+        /* --- End of FIX --- */
+        
         .day-cell .entry-content {
             text-align: center;
             flex-grow: 1;
@@ -306,7 +318,7 @@
             <div id="user-menu" class="relative hidden">
                 <button id="user-menu-trigger" class="flex items-center gap-2 text-sm p-1 rounded-full bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-md ring-1 ring-slate-900/10 dark:ring-white/10 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors">
                     <img id="user-photo" class="w-8 h-8 rounded-full" src="">
-                    <span id="user-name" class="font-semibold text-slate-700 dark:text-slate-300 pr-2 hidden sm:inline"></span>
+                    <span id="user-name" class="font-semibold text-slate-900 dark:text-slate-200 pr-2 hidden sm:inline"></span>
                 </button>
                 <div id="user-menu-content" class="absolute right-0 mt-2 w-60 themed-card p-2 rounded-xl shadow-lg hidden z-20">
                     <!-- Dynamic Content will be injected here via JS -->
@@ -316,7 +328,7 @@
             <button id="lang-switcher-btn" class="px-3 py-2 text-sm rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-md ring-1 ring-slate-900/10 dark:ring-white/10 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors flex items-center">
                 <span class="lang-en">EN</span><span class="lang-separator">/</span><span class="lang-gu">ગુજરાતી</span>
             </button>
-            <button id="theme-toggle-btn" class="h-10 w-10 flex items-center justify-center rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-md ring-1 ring-slate-900/10 dark:ring-white/10 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors">
+            <button id="theme-toggle-btn" class="h-10 w-10 flex items-center justify-center rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-md ring-1 ring-slate-900/10 dark:ring-white/10 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors overflow-hidden">
                 <svg id="theme-icon-sun" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                 <svg id="theme-icon-moon" class="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
             </button>
@@ -541,6 +553,14 @@
         window.gapiLoaded = gapiLoaded;
         window.gsiLoaded = gsiLoaded;
 
+        // --- DATE FIX: Helper function to get YYYY-MM-DD from local timezone ---
+        function toLocalISOString(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners(); 
             setupTheme(); 
@@ -618,6 +638,7 @@
 
                     if (user) {
                         userId = user.uid;
+                        dom.loginModal.classList.remove('flex');
                         dom.loginModal.classList.add('hidden');
                         dom.appContainer.classList.remove('hidden');
                         
@@ -683,8 +704,8 @@
                 dom.userName.title = '';
                 
                 dom.userMenuContent.innerHTML = `
-                    <div class="px-4 py-2 text-sm text-slate-500 border-b border-slate-200 dark:border-slate-700">
-                        <p class="font-bold text-slate-800 dark:text-slate-200">${user.displayName}</p>
+                    <div class="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                        <p class="font-bold text-slate-900 dark:text-slate-200">${user.displayName}</p>
                         <p class="truncate">${user.email}</p>
                     </div>
                     <button id="logout-menu-btn" class="w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg font-semibold text-sm text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors">
@@ -893,8 +914,9 @@
             dom.mainContent.classList.remove('hidden');
             dom.loader.style.display = 'none';
 
-            const startDate = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
-            const endDate = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
+            // --- DATE FIX: Use local date for query ---
+            const startDate = toLocalISOString(new Date(currentYear, currentMonth, 1));
+            const endDate = toLocalISOString(new Date(currentYear, currentMonth + 1, 0));
             const entriesCollection = collection(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`);
             const q = query(entriesCollection, where("date", ">=", startDate), where("date", "<=", endDate));
             dom.calendarGrid.innerHTML = `<div class="col-span-7 text-center p-8 opacity-50">Loading...</div>`;
@@ -920,15 +942,24 @@
         }
         
         function renderCalendar(year, month, currentEntriesMap) {
-            dom.calendarGrid.innerHTML = ''; const today = new Date(); today.setHours(0,0,0,0);
-            const firstDayOfMonth = new Date(year, month, 1), daysInMonth = new Date(year, month + 1, 0).getDate();
+            dom.calendarGrid.innerHTML = ''; 
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            
+            const firstDayOfMonth = new Date(year, month, 1);
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
             const startDayOfWeek = firstDayOfMonth.getDay(); 
             const startDayIndex = (startDayOfWeek === 0) ? 6 : startDayOfWeek - 1; 
 
             const t = translations[currentLang];
             for (let i = 0; i < startDayIndex; i++) { dom.calendarGrid.insertAdjacentHTML('beforeend', '<div class="day-cell disabled rounded-2xl"></div>'); }
+            
             for (let day = 1; day <= daysInMonth; day++) {
-                const date = new Date(year, month, day), dateString = date.toISOString().split('T')[0], isToday = date.getTime() === today.getTime();
+                // --- DATE FIX: Use local date for rendering ---
+                const date = new Date(year, month, day);
+                const dateString = toLocalISOString(date);
+                const isToday = toLocalISOString(today) === dateString;
+                
                 const dayData = currentEntriesMap.get(dateString);
                 let cellContent = `<div class="day-number">${day}</div><div class="entry-content">`;
                 if (dayData?.entries?.length > 0) {
@@ -970,7 +1001,12 @@
 
         function showDayDetails(dateString, focusTarget) {
             currentDayData = entriesMap.get(dateString) || { date: dateString, entries: [], upadEntries: [] };
-            dom.modalDateEl.textContent = new Date(dateString + 'T00:00:00').toLocaleDateString(currentLang === 'gu' ? 'gu-IN' : 'en-IN'); 
+            
+            // --- DATE FIX: Parse date string reliably for display ---
+            const [year, month, day] = dateString.split('-').map(Number);
+            const displayDate = new Date(year, month - 1, day);
+            dom.modalDateEl.textContent = displayDate.toLocaleDateString(currentLang === 'gu' ? 'gu-IN' : 'en-IN');
+             
             dom.addDiamondForm.reset(); dom.addUpadForm.reset();
             
             renderDayEntryList(currentDayData.entries); 
@@ -1089,7 +1125,12 @@
             const cell = e.target.closest('.day-cell');
             if (!cell || cell.classList.contains('disabled')) return;
             selectedDate = cell.dataset.date;
-            dom.choiceModalDate.textContent = new Date(selectedDate + 'T00:00:00').toLocaleDateString(currentLang === 'gu' ? 'gu-IN' : 'en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            
+            // --- DATE FIX: Parse date string reliably for display ---
+            const [year, month, day] = selectedDate.split('-').map(Number);
+            const displayDate = new Date(year, month - 1, day);
+            dom.choiceModalDate.textContent = displayDate.toLocaleDateString(currentLang === 'gu' ? 'gu-IN' : 'en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            
             dom.entryChoiceModal.classList.remove('hidden');
             dom.entryChoiceModal.classList.add('flex');
         }
@@ -1117,9 +1158,13 @@
             let totalHira = 0, totalAmount = 0, totalUpad = 0;
 
             [...entriesMap.values()].sort((a, b) => a.date.localeCompare(b.date)).forEach(dayData => {
+                // --- DATE FIX: Parse date string reliably for display ---
+                const [y, m, d] = dayData.date.split('-').map(Number);
+                const displayDate = new Date(y, m - 1, d);
+
                 if(dayData.entries && dayData.entries.length > 0) {
                     dayData.entries.forEach(entry => {
-                        const formattedDate = new Date(dayData.date + 'T00:00:00').toLocaleDateString(lang === 'gu' ? 'gu-IN' : 'en-IN', {day: '2-digit', month: 'short'});
+                        const formattedDate = displayDate.toLocaleDateString(lang === 'gu' ? 'gu-IN' : 'en-IN', {day: '2-digit', month: 'short'});
                         const total = entry.quantity * entry.rate;
                         hiraTableRows += `<tr><td>${formattedDate}</td><td>${entry.quantity}</td><td>${currencySymbol}${entry.rate.toLocaleString('en-IN')}</td><td>${currencySymbol}${total.toLocaleString('en-IN')}</td></tr>`;
                         totalHira += entry.quantity;
@@ -1128,7 +1173,7 @@
                 }
                 if(dayData.upadEntries && dayData.upadEntries.length > 0) {
                     dayData.upadEntries.forEach(entry => {
-                        const formattedDate = new Date(dayData.date + 'T00:00:00').toLocaleDateString(lang === 'gu' ? 'gu-IN' : 'en-IN', {day: '2-digit', month: 'short'});
+                        const formattedDate = displayDate.toLocaleDateString(lang === 'gu' ? 'gu-IN' : 'en-IN', {day: '2-digit', month: 'short'});
                         upadTableRows += `<tr><td>${formattedDate}</td><td>${entry.note || '-'}</td><td>${currencySymbol}${entry.amount.toLocaleString('en-IN')}</td></tr>`;
                         totalUpad += entry.amount;
                     });
