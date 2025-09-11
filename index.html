@@ -181,6 +181,26 @@
             opacity: 0.6;
         }
 
+        /* Button Animations */
+        #theme-toggle-btn, #lang-switcher-btn, #user-menu-trigger {
+            transition: transform 0.15s ease;
+        }
+        #theme-toggle-btn:active, #lang-switcher-btn:active, #user-menu-trigger:active {
+            transform: scale(0.92);
+        }
+
+        /* Theme Toggle Icon Animation */
+        #theme-toggle-btn {
+            position: relative;
+        }
+        #theme-toggle-btn svg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            /* transform is now set by JS */
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        }
+
         /* PDF Button CSS */
         .button {
           -moz-appearance: none; -webkit-appearance: none; appearance: none;
@@ -249,6 +269,11 @@
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 transition-colors duration-300">
 
+    <!-- Initial Page Loader to prevent flicker -->
+    <div id="initial-page-loader" class="fixed inset-0 bg-slate-100 dark:bg-slate-900 flex items-center justify-center z-[999]">
+        <div class="spinner"></div>
+    </div>
+
     <div id="toast-notification" class="fixed bottom-5 right-5 bg-green-500 text-white px-5 py-3 rounded-lg shadow-lg hidden transition-opacity duration-300 z-[100]">
         <span id="toast-message"></span>
     </div>
@@ -260,7 +285,7 @@
     </div>
 
 
-    <div id="login-modal" class="fixed inset-0 bg-slate-100 dark:bg-slate-900 flex items-center justify-center p-4 z-50">
+    <div id="login-modal" class="fixed inset-0 bg-slate-100 dark:bg-slate-900 hidden items-center justify-center p-4 z-50">
         <div class="themed-card p-8 w-full max-w-sm text-center">
             <h2 class="text-3xl font-bold font-headline" data-lang-key="main_title">Hira Hisab Diary</h2>
             <p class="opacity-70 mt-2 mb-8" data-lang-key="login_subtitle">Sign in to continue</p>
@@ -293,7 +318,7 @@
             </button>
             <button id="theme-toggle-btn" class="h-10 w-10 flex items-center justify-center rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-md ring-1 ring-slate-900/10 dark:ring-white/10 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors">
                 <svg id="theme-icon-sun" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                <svg id="theme-icon-moon" class="h-6 w-6 text-indigo-400 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                <svg id="theme-icon-moon" class="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
             </button>
         </div>
         
@@ -477,6 +502,7 @@
         let currentDayData = { date: null, entries: [], upadEntries: [] }, entriesMap = new Map();
 
         const dom = {
+            initialLoader: document.getElementById('initial-page-loader'),
             loader: document.getElementById('loader'), mainContent: document.getElementById('main-content'), monthSelect: document.getElementById('month-select'),
             yearSelect: document.getElementById('year-select'), calendarGrid: document.getElementById('calendar-grid'), totalHiraEl: document.getElementById('total-hira'),
             totalAmountEl: document.getElementById('total-amount'), totalUpadEl: document.getElementById('total-upad'), netAmountEl: document.getElementById('net-amount'),
@@ -512,7 +538,6 @@
             mergeLoader: document.getElementById('merge-loader'),
         };
         
-        // Expose functions to global scope for script onload attributes
         window.gapiLoaded = gapiLoaded;
         window.gsiLoaded = gsiLoaded;
 
@@ -534,8 +559,19 @@
             const savedTheme = localStorage.getItem('hira-hisab-theme');
             const isDark = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
             document.documentElement.classList.toggle('dark', isDark);
-            dom.themeIconSun.classList.toggle('hidden', isDark);
-            dom.themeIconMoon.classList.toggle('hidden', !isDark);
+
+            // Set initial state for theme icons for animation
+            if (isDark) {
+                dom.themeIconSun.style.transform = 'translate(-50%, -50%) rotate(-90deg) scale(0)';
+                dom.themeIconSun.style.opacity = '0';
+                dom.themeIconMoon.style.transform = 'translate(-50%, -50%) rotate(0deg) scale(1)';
+                dom.themeIconMoon.style.opacity = '1';
+            } else {
+                dom.themeIconMoon.style.transform = 'translate(-50%, -50%) rotate(90deg) scale(0)';
+                dom.themeIconMoon.style.opacity = '0';
+                dom.themeIconSun.style.transform = 'translate(-50%, -50%) rotate(0deg) scale(1)';
+                dom.themeIconSun.style.opacity = '1';
+            }
         }
 
         function setupLanguage() {
@@ -578,6 +614,8 @@
                 auth = getAuth(app);
 
                 onAuthStateChanged(auth, async (user) => {
+                    dom.initialLoader.classList.add('hidden'); // <-- HIDE INITIAL LOADER
+
                     if (user) {
                         userId = user.uid;
                         dom.loginModal.classList.add('hidden');
@@ -590,16 +628,18 @@
                     } else {
                         userId = null;
                         if(unsubscribe) unsubscribe();
-                        dom.loginModal.classList.remove('hidden');
                         dom.appContainer.classList.add('hidden');
-                        dom.mainContent.classList.add('hidden');
-                        dom.userMenu.classList.add('hidden'); 
+                        dom.loginModal.classList.remove('hidden');
+                        dom.loginModal.classList.add('flex'); // Make sure it's visible
                     }
                 });
 
             } catch (error) {
                 console.error("Firebase Init Error:", error);
+                dom.initialLoader.classList.add('hidden');
                 dom.loginModal.innerHTML = `<p class="text-red-500 p-8">${error.message}</p>`;
+                dom.loginModal.classList.remove('hidden');
+                dom.loginModal.classList.add('flex');
             }
         }
 
@@ -677,26 +717,21 @@
                     dom.mergeLoader.classList.remove('hidden');
                     dom.mergeLoader.classList.add('flex');
                     
-                    showToast('Account exists. Merging your guest data...', false);
                     const credential = GoogleAuthProvider.credentialFromError(error);
-                    if (!credential) {
-                        showToast('Could not retrieve credentials. Please try again.', true);
-                        dom.mergeLoader.classList.add('hidden');
-                        return;
-                    }
-
+                    
                     try {
                         const anonymousUid = anonymousUser.uid;
                         const entriesCollectionRef = collection(db, `artifacts/${appId}/users/${anonymousUid}/hiraHisabEntries`);
                         const guestDataSnapshot = await getDocs(entriesCollectionRef);
 
-                        const existingUserCredential = await signInWithCredential(auth, credential);
-                        const permanentUser = existingUserCredential.user;
+                        // Sign in with the existing Google credential. This will sign out the anonymous user.
+                        await signInWithCredential(auth, credential);
 
                         if (!guestDataSnapshot.empty) {
                              const batch = writeBatch(db);
                             guestDataSnapshot.forEach((docSnapshot) => {
-                                const permanentDocRef = doc(db, `artifacts/${appId}/users/${permanentUser.uid}/hiraHisabEntries`, docSnapshot.id);
+                                // Important: We are now logged in as the permanent user, so auth.currentUser.uid is correct.
+                                const permanentDocRef = doc(db, `artifacts/${appId}/users/${auth.currentUser.uid}/hiraHisabEntries`, docSnapshot.id);
                                 batch.set(permanentDocRef, docSnapshot.data(), { merge: true }); 
                             });
                             await batch.commit();
@@ -735,8 +770,22 @@
             dom.themeToggleBtn.addEventListener('click', () => {
                 const isDark = document.documentElement.classList.toggle('dark');
                 localStorage.setItem('hira-hisab-theme', isDark ? 'dark' : 'light');
-                dom.themeIconSun.classList.toggle('hidden', isDark); dom.themeIconMoon.classList.toggle('hidden', !isDark);
+
+                if (isDark) {
+                    // Animate from Sun to Moon
+                    dom.themeIconSun.style.transform = 'translate(-50%, -50%) rotate(-90deg) scale(0)';
+                    dom.themeIconSun.style.opacity = '0';
+                    dom.themeIconMoon.style.transform = 'translate(-50%, -50%) rotate(0deg) scale(1)';
+                    dom.themeIconMoon.style.opacity = '1';
+                } else {
+                    // Animate from Moon to Sun
+                    dom.themeIconMoon.style.transform = 'translate(-50%, -50%) rotate(90deg) scale(0)';
+                    dom.themeIconMoon.style.opacity = '0';
+                    dom.themeIconSun.style.transform = 'translate(-50%, -50%) rotate(0deg) scale(1)';
+                    dom.themeIconSun.style.opacity = '1';
+                }
             });
+
             dom.langSwitcherBtn.addEventListener('click', () => { switchLanguage(currentLang === 'en' ? 'gu' : 'en'); });
             dom.monthSelect.addEventListener('change', handleDateChange);
             dom.yearSelect.addEventListener('change', handleDateChange);
@@ -1316,7 +1365,7 @@
             for (const dayData of backupData) {
                 if (dayData.date) {
                     const docRef = doc(db, `artifacts/${appId}/users/${userId}/hiraHisabEntries`, dayData.date);
-                    batch.set(docRef, docData, { merge: true });
+                    batch.set(docRef, dayData, { merge: true });
                 }
             }
             await batch.commit();
@@ -1327,3 +1376,4 @@
     </script>
 </body>
 </html>
+
